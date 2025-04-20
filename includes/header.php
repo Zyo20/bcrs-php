@@ -190,6 +190,9 @@ if ($hasFlash) {
                             </button>
                             <div class="dropdown-menu hidden">
                                 <a href="index?page=edit_profile" class="dropdown-item flex items-center gap-2"><i class="fas fa-user-pen"></i> Edit Profile</a>
+                                <?php if ($_SESSION['role'] === 'user'): ?>
+                                    <a href="index?page=feedback" class="dropdown-item flex items-center gap-2"><i class="fas fa-comment-dots"></i> Send Feedback</a>
+                                <?php endif; ?>
                                 <div class="dropdown-divider"></div>
                                 <a href="includes/logout" class="dropdown-item flex items-center gap-2"><i class="fas fa-right-from-bracket"></i> Logout</a>
                             </div>

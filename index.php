@@ -212,6 +212,26 @@ switch ($page) {
         }
         include 'pages/edit_profile.php';
         break;
+    case 'feedback':
+        // Check if user is logged in
+        if (!isset($_SESSION['user_id'])) {
+            $_SESSION['flash_message'] = "Please login to send feedback.";
+            $_SESSION['flash_type'] = "error";
+            header("Location: index?page=login");
+            exit;
+        }
+        include 'pages/feedback.php';
+        break;
+    case 'view_feedback':
+        // Check if user is logged in
+        if (!isset($_SESSION['user_id'])) {
+            $_SESSION['flash_message'] = "Please login to view feedback.";
+            $_SESSION['flash_type'] = "error";
+            header("Location: index?page=login");
+            exit;
+        }
+        include 'pages/view_feedback.php';
+        break;
     default:
         // Show 404 page for invalid page requests
         show404("The page you requested was not found.");

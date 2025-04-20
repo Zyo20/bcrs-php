@@ -159,6 +159,37 @@ switch ($section) {
             include 'pages/admin/calendar/index.php';
         }
         break;
+    case 'feedback':
+        if (isset($_GET['action'])) {
+            switch ($_GET['action']) {
+                case 'view':
+                    include 'pages/admin/feedback/view.php';
+                    break;
+                case 'respond':
+                    include 'pages/admin/feedback/respond.php';
+                    break;
+                case 'mark_read':
+                    // Handle mark as read action directly
+                    if (isset($_GET['id']) && isset($_GET['csrf_token']) && verifyCSRFToken($_GET['csrf_token'])) {
+                        $id = (int)$_GET['id'];
+                        try {
+                            $stmt = $db->prepare("UPDATE feedback SET status = 'read' WHERE id = ?");
+                            $stmt->execute([$id]);
+                            setFlashMessage('Feedback marked as read', 'success');
+                        } catch (PDOException $e) {
+                            setFlashMessage('Error updating feedback status', 'error');
+                        }
+                    }
+                    redirect('index.php?page=admin&section=feedback');
+                    break;
+                default:
+                    include 'pages/admin/feedback/index.php';
+                    break;
+            }
+        } else {
+            include 'pages/admin/feedback/index.php';
+        }
+        break;
     default:
         include 'pages/admin/default_admin_dashboard.php';
         break;
