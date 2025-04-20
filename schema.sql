@@ -64,6 +64,21 @@ CREATE TABLE IF NOT EXISTS `reservation_items` (
   CONSTRAINT `reservation_items_ibfk_2` FOREIGN KEY (`resource_id`) REFERENCES `resources` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Feedback Table
+CREATE TABLE IF NOT EXISTS `feedback` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `subject` varchar(100) NOT NULL,
+  `message` text NOT NULL,
+  `status` enum('pending', 'read', 'responded') NOT NULL DEFAULT 'pending',
+  `admin_response` text DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `feedback_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Insert default admin user
 INSERT INTO `users` (`first_name`, `last_name`, `email`, `password`, `contact_number`, `address`, `role`, `status`) VALUES
 ('Admin', 'User', 'admin@example.com', '$2y$10$HfzIhGCCaxqyaIdGgjARSuOKAcm1Uy82YfLuNaajn6JrjLWy9Sj/W', '09123456789', 'Barangay Office', 'admin', 'approved');
@@ -76,4 +91,4 @@ INSERT INTO `resources` (`name`, `description`, `category`, `quantity`, `availab
 ('Plastic Chairs', 'White plastic chairs for events', 'equipment', 100, 'available'),
 ('Folding Tables', '6-foot rectangular folding tables', 'equipment', 20, 'available'),
 ('Portable Sound System', '1000W sound system with 2 speakers, mixer, and microphones', 'equipment', 1, 'available'),
-('Projector', 'HD Projector with 3000 lumens', 'equipment', 2, 'available'); 
+('Projector', 'HD Projector with 3000 lumens', 'equipment', 2, 'available');
