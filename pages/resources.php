@@ -1,0 +1,178 @@
+<?php
+// Get all active resources
+try {
+    $stmt = $db->prepare("
+        SELECT r.*, 
+            CASE 
+                WHEN r.category = 'equipment' THEN 
+                    r.quantity - IFNULL((
+                        SELECT SUM(ri.quantity) 
+                        FROM reservation_items ri 
+                        JOIN reservations res ON ri.reservation_id = res.id 
+                        WHERE ri.resource_id = r.id AND res.status IN ('pending', 'approved', 'for_delivery', 'for_pickup')
+                    ), 0) 
+                ELSE r.quantity 
+            END as available_quantity,
+            CASE
+                WHEN r.category = 'facility' THEN
+                    (SELECT COUNT(*) 
+                    FROM reservation_items ri 
+                    JOIN reservations res ON ri.reservation_id = res.id 
+                    WHERE ri.resource_id = r.id AND res.status = 'pending')
+                ELSE 0
+            END as has_pending_reservations,
+            CASE
+                WHEN r.category = 'facility' THEN
+                    (SELECT COUNT(*) 
+                    FROM reservation_items ri 
+                    JOIN reservations res ON ri.reservation_id = res.id 
+                    WHERE ri.resource_id = r.id AND res.status = 'approved')
+                ELSE 0
+            END as has_approved_reservations
+        FROM resources r
+        WHERE r.status = 'active' 
+        ORDER BY r.category, r.name
+    ");
+    $stmt->execute();
+    $resources = $stmt->fetchAll();
+    
+    // Group resources by category
+    $facilities = [];
+    $equipment = [];
+    
+    foreach ($resources as $resource) {
+        if ($resource['category'] === 'facility') {
+            $facilities[] = $resource;
+        } else {
+            $equipment[] = $resource;
+        }
+    }
+} catch (PDOException $e) {
+    echo "Error: " . $e->getMessage();
+}
+?>
+
+<div class="max-w-6xl mx-auto">
+    <h1 class="text-2xl font-bold text-blue-800 mb-6">Available Resources</h1>
+    
+    <div class="mb-10">
+        <h2 class="text-xl font-semibold text-blue-700 mb-4">Facilities</h2>
+        
+        <?php if (empty($facilities)): ?>
+            <p class="text-gray-600">No facilities available at this time.</p>
+        <?php else: ?>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <?php foreach ($facilities as $facility): ?>
+                    <?php 
+                    // Determine facility status text and color
+                    $statusText = ucfirst($facility['availability']);
+                    $statusColor = 'text-green-500';
+                    $facilityAvailable = true;
+                    
+                    if ($facility['availability'] !== 'available') {
+                        $statusColor = 'text-red-500';
+                        $facilityAvailable = false;
+                    } elseif ($facility['has_approved_reservations'] > 0) {
+                        $statusText = 'Reserved';
+                        $statusColor = 'text-red-500';
+                        $facilityAvailable = false;
+                    } elseif ($facility['has_pending_reservations'] > 0) {
+                        $statusText = 'Has Pending Reservation';
+                        $statusColor = 'text-orange-500';
+                        $facilityAvailable = false;
+                    }
+                    ?>
+                    
+                    <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition duration-300">
+                        <h3 class="text-lg font-semibold mb-2"><?php echo $facility['name']; ?></h3>
+                        <p class="text-gray-600 mb-4"><?php echo $facility['description']; ?></p>
+                        
+                        <div class="flex justify-between text-sm mb-3">
+                            <span class="text-gray-500">Status:</span>
+                            <span class="<?php echo $statusColor; ?> font-medium">
+                                <?php echo $statusText; ?>
+                            </span>
+                        </div>
+                        
+                        <?php if ($facility['requires_payment']): ?>
+                            <div class="flex justify-between text-sm mb-3">
+                                <span class="text-gray-500">Fee:</span>
+                                <span class="font-medium">₱<?php echo number_format($facility['payment_amount'], 2); ?></span>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <div class="mt-4">
+                            <?php if ($facilityAvailable): ?>
+                                <a href="index.php?page=reservation&resource_id=<?php echo $facility['id']; ?>" class="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition duration-300">Book Now</a>
+                            <?php else: ?>
+                                <button disabled class="inline-block px-4 py-2 bg-gray-300 text-gray-600 rounded cursor-not-allowed">Currently Unavailable</button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+    
+    <div class="mb-10">
+        <h2 class="text-xl font-semibold text-blue-700 mb-4">Equipment</h2>
+        
+        <?php if (empty($equipment)): ?>
+            <p class="text-gray-600">No equipment available at this time.</p>
+        <?php else: ?>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white rounded-lg overflow-hidden shadow-md">
+                    <thead class="bg-blue-600 text-white">
+                        <tr>
+                            <th class="py-3 px-4 text-left">Item</th>
+                            <th class="py-3 px-4 text-left">Description</th>
+                            <th class="py-3 px-4 text-center">Available Quantity</th>
+                            <th class="py-3 px-4 text-center">Status</th>
+                            <th class="py-3 px-4 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <?php foreach ($equipment as $item): ?>
+                            <tr class="hover:bg-gray-50">
+                                <td class="py-3 px-4"><?php echo $item['name']; ?></td>
+                                <td class="py-3 px-4"><?php echo $item['description']; ?></td>
+                                <td class="py-3 px-4 text-center"><?php echo $item['available_quantity']; ?></td>
+                                <td class="py-3 px-4 text-center">
+                                    <span class="inline-block px-2 py-1 rounded text-xs font-medium
+                                        <?php echo $item['availability'] === 'available' ? 'bg-green-100 text-green-800' : ($item['availability'] === 'reserved' ? 'bg-orange-100 text-orange-800' : 'bg-red-100 text-red-800'); ?>">
+                                        <?php echo ucfirst($item['availability']); ?>
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-center">
+                                    <?php if ($item['availability'] === 'available' && $item['available_quantity'] > 0): ?>
+                                        <a href="index.php?page=reservation&resource_id=<?php echo $item['id']; ?>" class="inline-block px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition duration-300">Reserve</a>
+                                    <?php else: ?>
+                                        <button disabled class="inline-block px-3 py-1 bg-gray-300 text-gray-600 text-sm rounded cursor-not-allowed">Unavailable</button>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+    
+    <div class="bg-blue-50 rounded-lg p-6">
+        <h2 class="text-xl font-semibold text-blue-700 mb-3">Reservation Guidelines</h2>
+        
+        <ul class="list-disc pl-5 text-gray-700 space-y-2">
+            <li>Reservations must be made at least 3 days in advance</li>
+            <li>Gym bookings require payment via GCash</li>
+            <li>Maximum of 1 tent per reservation</li>
+            <li>Maximum of 20 chairs per reservation</li>
+            <li>All equipment must be returned in good condition</li>
+            <li>Cancellations should be made at least 24 hours before the reservation date</li>
+            <li>For special requests, please visit the barangay office</li>
+        </ul>
+        
+        <div class="mt-4">
+            <a href="index.php?page=reservation" class="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition duration-300">Make a Reservation</a>
+        </div>
+    </div>
+</div>
