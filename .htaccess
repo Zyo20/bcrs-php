@@ -1,0 +1,17 @@
+RewriteEngine On
+
+# Remove .php extension
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.*)$ $1.php [L]
+
+# Handle direct access to .php files
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /([^/]+/)*[^/\.]+\.php\ HTTP/
+RewriteRule ^(([^/]+/)*[^/\.]+)\.php$ /$1 [L,R=301]
+
+# Exclude existing files and directories from rewrite
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Set index.php as default document
+DirectoryIndex index.php
