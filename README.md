@@ -174,7 +174,7 @@ cd /path/to/xampp/htdocs
 
 ## Default Admin Account
 
-- Contact Number: 09000000000
+- Email Address: admin@bcrs.com
 - Password: admin123
 
 ## System Workflow
