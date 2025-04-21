@@ -16,10 +16,10 @@ if ($hasFlash) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Barangay Resource Management System</title>
-    <!-- Tailwind CSS via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Local Tailwind CSS -->
+    <script src="js/tailwind.js"></script>
+    <!-- Local Font Awesome for icons -->
+    <link rel="stylesheet" href="includes/css/all.min.css">
     <!-- Notification System -->
     <script src="js/notifications.js"></script>
     <!-- Custom styles -->
