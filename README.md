@@ -77,9 +77,10 @@ A comprehensive PHP-based web application for managing barangay resources, booki
 
 - PHP 7.4+ (Backend)
 - MySQL (Database)
-- Tailwind CSS (Frontend Styling)
+- Tailwind CSS (Frontend Styling, Local Version)
 - Alpine.js (JavaScript Functionality)
 - Select2.js (Enhanced Dropdowns)
+- Font Awesome (Icons, Local Version)
 - Twilio API (SMS Notifications)
 - FullCalendar.js (Calendar Interface)
 
@@ -125,7 +126,17 @@ $username = 'your_mysql_username';
 $password = 'your_mysql_password';
 ```
 
-5. **Configure SMS notifications (optional):**
+5. **Verify offline CSS and JS files:**
+
+The system uses offline versions of Tailwind CSS and Font Awesome instead of CDN:
+- `js/tailwind.js` contains the Tailwind CSS code
+- `includes/css/all.min.css` contains the Font Awesome styles
+
+If these files need updating, you can download the latest versions from their respective websites:
+- Tailwind CSS: https://tailwindcss.com/
+- Font Awesome: https://fontawesome.com/
+
+6. **Configure SMS notifications (optional):**
 
 Edit the `config/sms.php` file with your Twilio credentials:
 
@@ -136,7 +147,7 @@ Edit the `config/sms.php` file with your Twilio credentials:
 'enabled' => true, // Set to false to disable SMS functionality
 ```
 
-6. **Set up the upload directories:**
+7. **Set up the upload directories:**
 
 Create the following directories with appropriate permissions:
 
@@ -148,11 +159,11 @@ chmod 755 uploads/ids
 chmod 755 uploads/payments
 ```
 
-7. **Configure your web server:**
+8. **Configure your web server:**
 
 Point your web server's document root to the project folder or set up a virtual host.
 
-8. **Run local development server (alternative):**
+9. **Run local development server (alternative):**
 
 If you're using XAMPP or similar:
 ```bash
