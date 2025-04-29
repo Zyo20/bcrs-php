@@ -275,7 +275,7 @@ if (isset($_SESSION['flash_message'])) {
                         </svg>
                         Filter
                     </button>
-                    <a href="index.php?page=admin&section=export_csv&export_type=resources&filter=<?php echo urlencode($filter); ?>&sort=<?php echo urlencode($sort); ?>&category=<?php echo urlencode($category); ?>&search=<?php echo urlencode($search); ?>" 
+                    <a href="pages/admin/export_csv.php?export_type=resources&filter=<?php echo urlencode($filter); ?>&sort=<?php echo urlencode($sort); ?>&category=<?php echo urlencode($category); ?>&search=<?php echo urlencode($search); ?>" 
                        class="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                        target="_blank"> <!-- Open in new tab to avoid disrupting the current view -->
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
