@@ -215,11 +215,69 @@ function getUsersListReport($db, $filter = 'all', $search = '', $searchField = '
     }
 }
 
+function getResourcesListReport($db, $filter = 'all', $sort = 'name_asc', $category = '', $search = '') {
+    // Build the SQL query based on filters
+    $query = "SELECT id, name, description, category, quantity, availability, created_at FROM resources WHERE 1=1";
+    $params = [];
+
+    // Apply category filter
+    if (!empty($category) && in_array($category, ['equipment', 'facility'])) {
+        $query .= " AND category = ?";
+        $params[] = $category;
+    }
+
+    // Apply availability filter
+    if ($filter !== 'all' && in_array($filter, ['available', 'reserved', 'maintenance'])) {
+        $query .= " AND availability = ?";
+        $params[] = $filter;
+    }
+
+    // Apply search
+    if (!empty($search)) {
+        $query .= " AND (name LIKE ? OR description LIKE ?)";
+        $searchParam = "%{$search}%";
+        $params[] = $searchParam;
+        $params[] = $searchParam;
+    }
+
+    // Apply sorting
+    switch ($sort) {
+        case 'name_desc':
+            $query .= " ORDER BY name DESC";
+            break;
+        case 'created_asc':
+            $query .= " ORDER BY created_at ASC";
+            break;
+        case 'created_desc':
+            $query .= " ORDER BY created_at DESC";
+            break;
+        case 'category_asc':
+            $query .= " ORDER BY category ASC, name ASC";
+            break;
+        case 'category_desc':
+            $query .= " ORDER BY category DESC, name ASC";
+            break;
+        default: // name_asc
+            $query .= " ORDER BY name ASC";
+            break;
+    }
+
+    try {
+        $stmt = $db->prepare($query);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Error exporting resources list: " . $e->getMessage());
+        return [];
+    }
+}
+
 // Get report data based on selected type
 $reportData = [];
+$exportType = isset($_GET['export_type']) ? $_GET['export_type'] : $reportType; // Use export_type if present
 
 // Export the data to CSV based on report type
-switch ($reportType) {
+switch ($exportType) { // Changed from $reportType to $exportType
     case 'users_list':
         // Get filter parameters
         $filter = isset($_GET['filter']) ? $_GET['filter'] : 'all';
@@ -243,6 +301,29 @@ switch ($reportType) {
                 $row['address'],
                 $row['status'],
                 $row['blacklisted'] ? 'Yes' : 'No',
+                $row['created_at']
+            ]);
+        }
+        break;
+    case 'resources': // New case for filtered resources export
+        $filter = isset($_GET['filter']) ? $_GET['filter'] : 'all';
+        $sort = isset($_GET['sort']) ? $_GET['sort'] : 'name_asc';
+        $category = isset($_GET['category']) ? $_GET['category'] : '';
+        $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+
+        $reportData = getResourcesListReport($db, $filter, $sort, $category, $search);
+        $filename = "Resources_List_" . date('Y-m-d') . ".csv";
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+        fputcsv($output, ['ID', 'Name', 'Description', 'Category', 'Quantity', 'Availability', 'Created At']);
+        foreach ($reportData as $row) {
+            fputcsv($output, [
+                $row['id'],
+                $row['name'],
+                $row['description'],
+                $row['category'],
+                $row['quantity'],
+                $row['availability'],
                 $row['created_at']
             ]);
         }
