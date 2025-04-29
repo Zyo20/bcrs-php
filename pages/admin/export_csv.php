@@ -1,6 +1,11 @@
 <?php
 // This file is dedicated just for CSV exports - no HTML output
-require_once '../../config/database.php';
+// Prevent any session or other output before headers
+ob_clean(); // Clean any existing output buffers
+session_write_close(); // Close the session to prevent locks
+
+$baseDir = $_SERVER['DOCUMENT_ROOT'] . '/git/bcrs-php/';
+require_once $baseDir . 'config/database.php';
 
 // Get date range filter
 $startDate = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-d', strtotime('-30 days'));
