@@ -8,6 +8,7 @@ $quantity = 1;
 $availability = 'available';
 $requires_payment = 0;
 $payment_amount = 0.00;
+$image = ''; // Initialize image variable
 
 // Check if form was submitted
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -15,6 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Log entire $_POST array to server logs
     error_log("======= RESOURCE ADDITION DEBUG START =======");
     error_log("RAW POST data: " . print_r($_POST, true));
+    error_log("Files data: " . print_r($_FILES, true));
     
     // Sanitize and validate input - be very explicit about type casting
     $name = trim($_POST['name'] ?? '');
@@ -64,6 +66,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors['payment_amount'] = 'Payment amount must be greater than zero if payment is required';
     }
     
+    // Handle image upload
+    if (!empty($_FILES['image']['name'])) {
+        $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        $max_size = 5 * 1024 * 1024; // 5MB
+        
+        if (!in_array($_FILES['image']['type'], $allowed_types)) {
+            $errors['image'] = 'Only JPEG, PNG, GIF, and WEBP images are allowed';
+        } elseif ($_FILES['image']['size'] > $max_size) {
+            $errors['image'] = 'Image size must not exceed 5MB';
+        } elseif ($_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+            $errors['image'] = 'Error uploading image. Code: ' . $_FILES['image']['error'];
+        } else {
+            // Create uploads/resources directory if it doesn't exist
+            $upload_dir = 'uploads/resources/';
+            if (!file_exists($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+            
+            // Generate a unique filename with timestamp and uniqid
+            $file_extension = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
+            $new_filename = uniqid() . '_' . time() . '.' . $file_extension;
+            $upload_path = $upload_dir . $new_filename;
+            
+            if (move_uploaded_file($_FILES['image']['tmp_name'], $upload_path)) {
+                $image = $upload_path;
+                error_log("Image uploaded successfully: $image");
+            } else {
+                $errors['image'] = 'Failed to upload image';
+                error_log("Failed to move uploaded file to $upload_path");
+            }
+        }
+    }
+    
     // If no errors, insert into database
     if (empty($errors)) {
         try {
@@ -74,10 +109,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Use a transaction to ensure data integrity
             $db->beginTransaction();
             
-            // Verify quantity is correctly passed in the bind parameters
+            // Include image field in the SQL query
             $stmt = $db->prepare("
-                INSERT INTO resources (name, description, category, quantity, availability, requires_payment, payment_amount, status, created_at, updated_at) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'active', NOW(), NOW())
+                INSERT INTO resources (name, description, category, quantity, availability, requires_payment, payment_amount, status, image, created_at, updated_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, NOW(), NOW())
             ");
             
             // Explicitly bind each parameter
@@ -88,6 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bindParam(5, $availability, PDO::PARAM_STR);
             $stmt->bindParam(6, $requires_payment, PDO::PARAM_INT);
             $stmt->bindParam(7, $payment_amount, PDO::PARAM_STR);
+            $stmt->bindParam(8, $image, PDO::PARAM_STR);  // Add image parameter
             
             // Execute and check result
             $result = $stmt->execute();
@@ -117,6 +153,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Add detailed log
                 $logMsg = "Resource added successfully. Name: $name, Category: $category, Quantity: $quantity";
+                if ($image) {
+                    $logMsg .= ", Image: $image";
+                }
                 error_log($logMsg);
                 
                 // Write to admin_logs if the table exists
@@ -192,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="bg-white shadow overflow-hidden sm:rounded-lg">
         <div class="px-4 py-5 sm:p-6">
-            <form action="index.php?page=admin&section=add_resource" method="POST" class="space-y-6">
+            <form action="index.php?page=admin&section=add_resource" method="POST" class="space-y-6" enctype="multipart/form-data">
                 <!-- Resource Name -->
                 <div>
                     <label for="name" class="block text-sm font-medium text-gray-700">Resource Name <span class="text-red-500">*</span></label>
@@ -288,6 +327,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <p class="mt-1 text-sm text-gray-500">Specify the payment amount if payment is required.</p>
                     <?php if (isset($errors['payment_amount'])): ?>
                         <p class="mt-1 text-sm text-red-600"><?php echo $errors['payment_amount']; ?></p>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Resource Image -->
+                <div>
+                    <label for="image" class="block text-sm font-medium text-gray-700">Resource Image</label>
+                    <div class="mt-1">
+                        <input type="file" name="image" id="image" accept="image/*" class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md <?php echo isset($errors['image']) ? 'border-red-500' : ''; ?>">
+                    </div>
+                    <p class="mt-1 text-sm text-gray-500">Upload an image for this resource (JPEG, PNG, GIF, WEBP).</p>
+                    <?php if (isset($errors['image'])): ?>
+                        <p class="mt-1 text-sm text-red-600"><?php echo $errors['image']; ?></p>
                     <?php endif; ?>
                 </div>
 

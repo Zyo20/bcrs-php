@@ -9,6 +9,39 @@ if ($hasFlash) {
     unset($_SESSION['flash_message']);
     unset($_SESSION['flash_type']);
 }
+
+// Session timeout handling - expire after 5 minutes of inactivity
+$sessionTimeout = 300; // 5 minutes in seconds
+$currentTime = time();
+
+// Check if user is logged in and session timeout is applicable
+if (isset($_SESSION['user_id'])) {
+    // If last activity timestamp doesn't exist, create it
+    if (!isset($_SESSION['last_activity'])) {
+        $_SESSION['last_activity'] = $currentTime;
+    }
+    
+    // Check if session has expired
+    if (($currentTime - $_SESSION['last_activity']) > $sessionTimeout) {
+        // Session expired - destroy session and redirect to login
+        session_unset();
+        session_destroy();
+        
+        // Start a new session to allow setting a flash message
+        session_start();
+        
+        // Set a flash message to notify the user
+        $_SESSION['flash_message'] = "Your session has expired due to inactivity. Please log in again.";
+        $_SESSION['flash_type'] = "error";
+        
+        // Redirect to login page using the same format as the rest of the site
+        header("Location: index?page=login&session_expired=1");
+        exit;
+    }
+    
+    // Session is still valid, update last activity time
+    $_SESSION['last_activity'] = $currentTime;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -22,6 +55,10 @@ if ($hasFlash) {
     <link rel="stylesheet" href="includes/css/all.min.css">
     <!-- Notification System -->
     <script src="js/notifications.js"></script>
+    <!-- Session Monitor Script -->
+    <?php if (isset($_SESSION['user_id'])): ?>
+    <script src="js/session-monitor.js"></script>
+    <?php endif; ?>
     <!-- Custom styles -->
     <style>
         /* User dropdown styles */
@@ -118,6 +155,19 @@ if ($hasFlash) {
         .notification-header h3 {
             color: #000;
         }
+        
+        /* Sticky footer styles */
+        html {
+            height: 100%;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        main {
+            flex: 1;
+        }
     </style>
     <script>
         // Simple JavaScript for closing flash messages
@@ -130,18 +180,23 @@ if ($hasFlash) {
         });
     </script>
 </head>
-<body class="bg-gray-300 min-h-screen relative pb-20">
+<body class="bg-gray-300 flex flex-col min-h-screen">
+    <?php if (isset($_SESSION['user_id'])): ?>
+    <!-- Session monitor container - this element activates the session monitor -->
+    <div id="session-monitor-container" class="hidden" data-timeout="<?php echo $sessionTimeout; ?>"></div>
+    <?php endif; ?>
+    
     <header class="bg-gray-600 text-white shadow-md">
         <div class="container mx-auto px-4 py-3">
             <div class="flex justify-between items-center">
                 <?php if (isLoggedIn()): ?>
                     <?php if (isAdmin()): ?>
-                        <a href="index?page=admin" class="text-xl font-bold">Barangay Resource Management</a>
+                        <a href="index?page=admin" class="text-xl font-bold">BARSERVE - Admin</a>
                     <?php else: ?>
-                        <a href="index?page=dashboard" class="text-xl font-bold">Barangay Resource Management</a>
+                        <a href="index?page=dashboard" class="text-xl font-bold">BARSERVE</a>
                     <?php endif; ?>
                 <?php else: ?>
-                    <a href="index" class="text-xl font-bold">Barangay Resource Management</a>
+                    <a href="index" class="text-xl font-bold">BARSERVE</a>
                 <?php endif; ?>
                 
                 <nav class="hidden md:flex space-x-4">
@@ -206,13 +261,15 @@ if ($hasFlash) {
                 <!-- Mobile menu button -->
                 <div class="md:hidden">
                     <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="text-white focus:outline-none">
-                        <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24">
-                            <path d="M4 6h16M4 12h16M4 18h16"></path>
+                        <svg class="h-6 w-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 6h16"></path>
+                            <path d="M4 12h16"></path>
+                            <path d="M4 18h16"></path>
                         </svg>
                     </button>
                     
                     <!-- Mobile menu -->
-                    <div id="mobile-menu" class="hidden absolute top-16 right-0 left-0 bg-blue-600 shadow-md">
+                    <div id="mobile-menu" class="hidden absolute top-16 right-0 left-0 bg-gray-600 shadow-md z-50">
                         <div class="flex flex-col p-4 space-y-3">
                             <?php if (!isLoggedIn()): ?>
                             <a href="index" class="hover:bg-blue-700 px-3 py-2 rounded transition duration-200 flex items-center gap-2"><i class="fas fa-home"></i> Home</a>

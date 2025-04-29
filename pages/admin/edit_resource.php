@@ -9,6 +9,7 @@ $quantity = 1;
 $availability = '';
 $requires_payment = 0; // New variable
 $payment_amount = 0.00; // New variable
+$current_image = ''; // Add image variable
 
 // Check if resource exists and retrieve data
 try {
@@ -24,6 +25,7 @@ try {
         $availability = $row['availability'];
         $requires_payment = $row['requires_payment'] ?? 0; // Get existing value or default to 0
         $payment_amount = $row['payment_amount'] ?? 0.00; // Get existing value or default to 0.00
+        $current_image = $row['image'] ?? ''; // Get existing image path
     } else {
         // Resource not found
         $_SESSION['flash_message'] = 'Resource not found';
@@ -44,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Debug logs for troubleshooting
     error_log("====== RESOURCE EDIT DEBUG START ======");
     error_log("Raw POST data for resource edit: " . print_r($_POST, true));
+    error_log("Files data: " . print_r($_FILES, true));
     
     // Sanitize and validate input with explicit type casting
     $name = trim($_POST['name'] ?? '');
@@ -53,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $availability = $_POST['availability'] ?? '';
     $requires_payment = isset($_POST['requires_payment']) ? 1 : 0; // Get checkbox value
     $payment_amount = isset($_POST['payment_amount']) ? (float)$_POST['payment_amount'] : 0.00; // Get payment amount
+    $remove_image = isset($_POST['remove_image']) ? true : false; // Check if image should be removed
     
     error_log("Processed quantity (after filter_var): " . var_export($quantity, true));
     
@@ -92,6 +96,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors['payment_amount'] = 'Payment amount must be greater than zero if payment is required';
     }
     
+    // Handle image upload or removal
+    $new_image = $current_image; // Start with current image
+    
+    // If remove image is checked, set image to empty
+    if ($remove_image) {
+        $new_image = '';
+        // If there's an existing image, we'll delete it after successful update
+    }
+    
+    // If a new image is uploaded, process it
+    if (!empty($_FILES['image']['name'])) {
+        $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        $max_size = 5 * 1024 * 1024; // 5MB
+        
+        if (!in_array($_FILES['image']['type'], $allowed_types)) {
+            $errors['image'] = 'Only JPEG, PNG, GIF, and WEBP images are allowed';
+        } elseif ($_FILES['image']['size'] > $max_size) {
+            $errors['image'] = 'Image size must not exceed 5MB';
+        } elseif ($_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+            $errors['image'] = 'Error uploading image. Code: ' . $_FILES['image']['error'];
+        } else {
+            // Create uploads/resources directory if it doesn't exist
+            $upload_dir = 'uploads/resources/';
+            if (!file_exists($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+            
+            // Generate a unique filename with timestamp and uniqid
+            $file_extension = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
+            $new_filename = uniqid() . '_' . time() . '.' . $file_extension;
+            $upload_path = $upload_dir . $new_filename;
+            
+            if (move_uploaded_file($_FILES['image']['tmp_name'], $upload_path)) {
+                // If previously had an image, mark it for deletion after successful update
+                $old_image = $current_image;
+                $new_image = $upload_path;
+                error_log("New image uploaded successfully: $new_image");
+            } else {
+                $errors['image'] = 'Failed to upload image';
+                error_log("Failed to move uploaded file to $upload_path");
+            }
+        }
+    }
+    
     // If no errors, update the database
     if (empty($errors)) {
         try {
@@ -101,11 +149,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $db->beginTransaction();
             
-            // Use explicit parameter binding
+            // Use explicit parameter binding and include image column
             $stmt = $db->prepare("
                 UPDATE resources 
                 SET name = ?, description = ?, category = ?, quantity = ?, availability = ?, 
-                    requires_payment = ?, payment_amount = ?, updated_at = NOW()
+                    requires_payment = ?, payment_amount = ?, image = ?, updated_at = NOW()
                 WHERE id = ?
             ");
             
@@ -117,11 +165,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bindParam(5, $availability, PDO::PARAM_STR);
             $stmt->bindParam(6, $requires_payment, PDO::PARAM_INT);
             $stmt->bindParam(7, $payment_amount, PDO::PARAM_STR);
-            $stmt->bindParam(8, $resource_id, PDO::PARAM_INT);
+            $stmt->bindParam(8, $new_image, PDO::PARAM_STR); // Bind image path
+            $stmt->bindParam(9, $resource_id, PDO::PARAM_INT);
             
             $result = $stmt->execute();
             
             if ($result) {
+                // Delete old image file if it exists and was replaced or removed
+                if (!empty($old_image) && file_exists($old_image) && $old_image != $new_image) {
+                    @unlink($old_image);
+                    error_log("Old image deleted: $old_image");
+                }
+                
                 // Verify the quantity was saved correctly
                 $verifyStmt = $db->prepare("SELECT quantity FROM resources WHERE id = ?");
                 $verifyStmt->execute([$resource_id]);
@@ -143,12 +198,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Add detailed log
                 $logMsg = "Resource updated successfully. Name: $name, Category: $category, Quantity: $quantity";
+                if ($new_image !== $current_image) {
+                    $logMsg .= ", Image " . ($new_image ? "updated" : "removed");
+                }
                 error_log($logMsg);
                 
                 $db->commit();
                 
                 // Success - set flash message and redirect
-                $_SESSION['flash_message'] = "Resource '{$name}' updated successfully with quantity: $quantity!";
+                $_SESSION['flash_message'] = "Resource '{$name}' updated successfully!";
                 $_SESSION['flash_type'] = 'success';
                 
                 // Redirect to resources page
@@ -200,7 +258,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="bg-white shadow overflow-hidden sm:rounded-lg">
         <div class="px-4 py-5 sm:p-6">
-            <form action="index.php?page=admin&section=edit_resource&id=<?php echo $resource_id; ?>" method="POST" class="space-y-6">
+            <form action="index.php?page=admin&section=edit_resource&id=<?php echo $resource_id; ?>" method="POST" class="space-y-6" enctype="multipart/form-data">
                 <!-- Resource Name -->
                 <div>
                     <label for="name" class="block text-sm font-medium text-gray-700">Resource Name <span class="text-red-500">*</span></label>
@@ -301,6 +359,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <p class="mt-1 text-sm text-red-600"><?php echo $errors['payment_amount']; ?></p>
                     <?php endif; ?>
                 </div>
+
+                <!-- Resource Image -->
+                <div>
+                    <label for="image" class="block text-sm font-medium text-gray-700">Resource Image</label>
+                    <div class="mt-1">
+                        <input type="file" name="image" id="image" accept="image/*" class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md <?php echo isset($errors['image']) ? 'border-red-500' : ''; ?>">
+                    </div>
+                    <p class="mt-1 text-sm text-gray-500">Upload an image for this resource (optional).</p>
+                    <?php if (isset($errors['image'])): ?>
+                        <p class="mt-1 text-sm text-red-600"><?php echo $errors['image']; ?></p>
+                    <?php endif; ?>
+                </div>
+
+                <?php if (!empty($current_image)): ?>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700">Current Image</label>
+                        <div class="mt-2">
+                            <img src="<?php echo htmlspecialchars($current_image); ?>" alt="Current Resource Image" class="h-32 w-32 object-cover rounded-md">
+                        </div>
+                        <div class="mt-2">
+                            <input type="checkbox" name="remove_image" id="remove_image" value="1" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                            <label for="remove_image" class="ml-2 text-sm text-gray-700">Remove current image</label>
+                        </div>
+                    </div>
+                <?php endif; ?>
 
                 <div class="pt-5">
                     <div class="flex justify-end">

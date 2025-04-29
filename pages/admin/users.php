@@ -199,9 +199,20 @@ try {
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-blue-800">Manage Users</h1>
-        <a href="index.php?page=admin" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150">
-            Back to Dashboard
-        </a>
+        <div class="flex items-center space-x-2">
+            <a href="index.php?page=admin" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150">
+                ← Back to Dashboard
+            </a>
+            <a href="index.php?page=admin&section=export_csv&report_type=users_list&filter=<?php echo $filter; ?><?php echo !empty($search) ? '&search=' . urlencode($search) . '&search_field=' . urlencode($searchField) : ''; ?><?php echo $sortBy !== 'id' || $sortOrder !== 'desc' ? '&sort=' . $sortBy . '&order=' . $sortOrder : ''; ?>" 
+               class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150">
+                <span class="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Export to CSV
+                </span>
+            </a>
+        </div>
     </div>
     
     <?php if (isset($_SESSION['success_message'])): ?>
@@ -220,7 +231,7 @@ try {
     
     <!-- Status filters -->
     <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div class="grid grid-cols-5 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <a href="index.php?page=admin&section=users<?php echo !empty($search) ? '&search=' . urlencode($search) . '&search_field=' . urlencode($searchField) : ''; ?><?php echo $sortBy !== 'id' || $sortOrder !== 'desc' ? '&sort=' . $sortBy . '&order=' . $sortOrder : ''; ?>" 
                class="<?php echo $filter === 'all' ? 'bg-blue-100 border-blue-500' : 'bg-gray-50 hover:bg-gray-100'; ?> border-l-4 p-4 rounded transition-colors duration-150">
                 <div class="text-lg font-semibold"><?php echo $totalUsers; ?></div>
@@ -237,12 +248,6 @@ try {
                class="<?php echo $filter === 'active' ? 'bg-green-100 border-green-500' : 'bg-gray-50 hover:bg-gray-100'; ?> border-l-4 p-4 rounded transition-colors duration-150">
                 <div class="text-lg font-semibold"><?php echo $statusCounts['approved']; ?></div>
                 <div class="text-gray-600">Active</div>
-            </a>
-            
-            <a href="index.php?page=admin&section=users&filter=blocked<?php echo !empty($search) ? '&search=' . urlencode($search) . '&search_field=' . urlencode($searchField) : ''; ?><?php echo $sortBy !== 'id' || $sortOrder !== 'desc' ? '&sort=' . $sortBy . '&order=' . $sortOrder : ''; ?>" 
-               class="<?php echo $filter === 'blocked' ? 'bg-red-100 border-red-500' : 'bg-gray-50 hover:bg-gray-100'; ?> border-l-4 p-4 rounded transition-colors duration-150">
-                <div class="text-lg font-semibold"><?php echo $statusCounts['rejected']; ?></div>
-                <div class="text-gray-600">Blocked</div>
             </a>
             
             <a href="index.php?page=admin&section=users&filter=blacklisted<?php echo !empty($search) ? '&search=' . urlencode($search) . '&search_field=' . urlencode($searchField) : ''; ?><?php echo $sortBy !== 'id' || $sortOrder !== 'desc' ? '&sort=' . $sortBy . '&order=' . $sortOrder : ''; ?>" 
