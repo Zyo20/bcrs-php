@@ -150,11 +150,103 @@ function getFinancialReport($db, $startDate, $endDate) {
     }
 }
 
+function getUsersListReport($db, $filter = 'all', $search = '', $searchField = 'all', $sortBy = 'id', $sortOrder = 'desc') {
+    // Prepare the query based on filter, search and sort
+    $query = "SELECT id, first_name, last_name, email, contact_number, address, status, blacklisted, created_at FROM users WHERE role = 'user'";
+    $params = [];
+
+    // Apply status filter
+    switch ($filter) {
+        case 'pending':
+            $query .= " AND status = 'pending'";
+            break;
+        case 'active':
+            $query .= " AND status = 'approved'";
+            break;
+        case 'blocked':
+            $query .= " AND status = 'rejected'";
+            break;
+        case 'blacklisted':
+            $query .= " AND blacklisted = 1";
+            break;
+        // 'all' doesn't need additional conditions
+    }
+
+    // Apply search if provided
+    if (!empty($search)) {
+        switch ($searchField) {
+            case 'name':
+                $query .= " AND (first_name LIKE ? OR last_name LIKE ?)";
+                $params[] = "%{$search}%";
+                $params[] = "%{$search}%";
+                break;
+            case 'email':
+                $query .= " AND email LIKE ?";
+                $params[] = "%{$search}%";
+                break;
+            case 'contact':
+                $query .= " AND contact_number LIKE ?";
+                $params[] = "%{$search}%";
+                break;
+            default: // 'all' - search all fields
+                $query .= " AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR contact_number LIKE ?)";
+                $params[] = "%{$search}%";
+                $params[] = "%{$search}%";
+                $params[] = "%{$search}%";
+                $params[] = "%{$search}%";
+        }
+    }
+
+    // Add sorting - ensure we only sort by allowed fields
+    $allowedSortFields = ['id', 'first_name', 'email', 'contact_number', 'created_at', 'status'];
+    $allowedSortOrders = ['asc', 'desc'];
+    $sortBy = in_array($sortBy, $allowedSortFields) ? $sortBy : 'id';
+    $sortOrder = in_array($sortOrder, $allowedSortOrders) ? $sortOrder : 'desc';
+    
+    $query .= " ORDER BY {$sortBy} {$sortOrder}";
+
+    try {
+        $stmt = $db->prepare($query);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Error exporting users list: " . $e->getMessage());
+        return [];
+    }
+}
+
 // Get report data based on selected type
 $reportData = [];
 
 // Export the data to CSV based on report type
 switch ($reportType) {
+    case 'users_list':
+        // Get filter parameters
+        $filter = isset($_GET['filter']) ? $_GET['filter'] : 'all';
+        $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+        $searchField = isset($_GET['search_field']) ? $_GET['search_field'] : 'all';
+        $sortBy = isset($_GET['sort']) ? $_GET['sort'] : 'id';
+        $sortOrder = isset($_GET['order']) ? $_GET['order'] : 'desc';
+        
+        $reportData = getUsersListReport($db, $filter, $search, $searchField, $sortBy, $sortOrder);
+        $filename = "Users_List_" . date('Y-m-d') . ".csv";
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        
+        fputcsv($output, ['ID', 'First Name', 'Last Name', 'Email', 'Contact Number', 'Address', 'Status', 'Blacklisted', 'Registration Date']);
+        foreach ($reportData as $row) {
+            fputcsv($output, [
+                $row['id'],
+                $row['first_name'],
+                $row['last_name'], 
+                $row['email'],
+                $row['contact_number'],
+                $row['address'],
+                $row['status'],
+                $row['blacklisted'] ? 'Yes' : 'No',
+                $row['created_at']
+            ]);
+        }
+        break;
     case 'reservation':
         $reportData = getReservationReport($db, $startDate, $endDate);
         fputcsv($output, ['Date', 'Total', 'Approved', 'Rejected', 'Pending', 'Completed', 'Revenue']);

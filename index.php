@@ -232,6 +232,9 @@ switch ($page) {
         }
         include 'pages/view_feedback.php';
         break;
+    case 'test_sms':
+        include 'test_sms.php';
+        break;
     default:
         // Show 404 page for invalid page requests
         show404("The page you requested was not found.");

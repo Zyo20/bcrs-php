@@ -84,10 +84,10 @@ if (!function_exists('getPaymentStatusBadge')) {
 
 <div class="max-w-6xl mx-auto">
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-        <h1 class="text-2xl font-bold text-blue-800">My Dashboard</h1>
-        <div>
-            <a href="index.php?page=payment_history" class="mt-2 md:mt-0 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition duration-300 mr-2">Payment History</a>
-            <a href="index.php?page=reservation" class="mt-2 md:mt-0 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition duration-300">New Reservation</a>
+        <h1 class="text-2xl font-bold text-blue-800 mb-4 md:mb-0">My Dashboard</h1>
+        <div class="flex flex-wrap gap-2">
+            <a href="index.php?page=payment_history" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition duration-300">Payment History</a>
+            <a href="index.php?page=reservation" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition duration-300">New Reservation</a>
         </div>
     </div>
     

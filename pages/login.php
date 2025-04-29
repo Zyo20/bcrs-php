@@ -1,7 +1,20 @@
 <?php
+// Check for session expired parameter
+if (isset($_GET['session_expired']) && $_GET['session_expired'] == 1) {
+    // Only set flash message if it's not already set (to avoid overriding another message)
+    if (!isset($_SESSION['flash_message'])) {
+        $_SESSION['flash_message'] = "Your session has expired due to inactivity. Please log in again.";
+        $_SESSION['flash_type'] = "error";
+        
+        // Redirect to remove the query parameter - use consistent URL format
+        header("Location: index?page=login");
+        exit;
+    }
+}
+
 // Check if user is already logged in
 if (isLoggedIn()) {
-    header("Location: index.php");
+    header("Location: index");
     exit;
 }
 
@@ -49,9 +62,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         
                         // Redirect based on role
                         if ($user['role'] === 'admin') {
-                            header("Location: index.php?page=admin");
+                            header("Location: index?page=admin");
                         } else {
-                            header("Location: index.php?page=dashboard");
+                            header("Location: index?page=dashboard");
                         }
                         exit;
                     }
@@ -120,6 +133,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
     
     <div class="mt-4 text-center">
-        <p class="text-gray-600">Don't have an account? <a href="index.php?page=register" class="text-blue-600 hover:underline">Register here</a></p>
+        <p class="text-gray-600">Don't have an account? <a href="index?page=register" class="text-blue-600 hover:underline">Register here</a></p>
     </div>
 </div>

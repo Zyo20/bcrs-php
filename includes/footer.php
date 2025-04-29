@@ -1,9 +1,9 @@
 </main>
     
-    <footer class="bg-gray-600 text-white py-4 mt-6">
+    <footer class="bg-gray-600 text-white py-4 mt-auto">
         <div class="container mx-auto px-4">
             <div class="text-center">
-                <p>&copy; <?php echo date('Y'); ?> Barangay Resource Management System. All rights reserved.</p>
+                <p>&copy; <?php echo date('Y'); ?> BARSERVE. All rights reserved.</p>
             </div>
         </div>
     </footer>

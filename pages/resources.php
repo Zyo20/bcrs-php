@@ -81,32 +81,41 @@ try {
                         $statusColor = 'text-orange-500';
                         $facilityAvailable = false;
                     }
+                    
+                    // Check if facility has image
+                    $hasImage = !empty($facility['image']) && file_exists($facility['image']);
                     ?>
                     
-                    <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition duration-300">
-                        <h3 class="text-lg font-semibold mb-2"><?php echo $facility['name']; ?></h3>
-                        <p class="text-gray-600 mb-4"><?php echo $facility['description']; ?></p>
-                        
-                        <div class="flex justify-between text-sm mb-3">
-                            <span class="text-gray-500">Status:</span>
-                            <span class="<?php echo $statusColor; ?> font-medium">
-                                <?php echo $statusText; ?>
-                            </span>
-                        </div>
-                        
-                        <?php if ($facility['requires_payment']): ?>
-                            <div class="flex justify-between text-sm mb-3">
-                                <span class="text-gray-500">Fee:</span>
-                                <span class="font-medium">₱<?php echo number_format($facility['payment_amount'], 2); ?></span>
-                            </div>
+                    <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
+                        <?php if ($hasImage): ?>
+                            <div class="h-48 bg-cover bg-center" style="background-image: url('<?php echo htmlspecialchars($facility['image']); ?>')"></div>
                         <?php endif; ?>
                         
-                        <div class="mt-4">
-                            <?php if ($facilityAvailable): ?>
-                                <a href="index.php?page=reservation&resource_id=<?php echo $facility['id']; ?>" class="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition duration-300">Book Now</a>
-                            <?php else: ?>
-                                <button disabled class="inline-block px-4 py-2 bg-gray-300 text-gray-600 rounded cursor-not-allowed">Currently Unavailable</button>
+                        <div class="p-6">
+                            <h3 class="text-lg font-semibold mb-2"><?php echo $facility['name']; ?></h3>
+                            <p class="text-gray-600 mb-4"><?php echo $facility['description']; ?></p>
+                            
+                            <div class="flex justify-between text-sm mb-3">
+                                <span class="text-gray-500">Status:</span>
+                                <span class="<?php echo $statusColor; ?> font-medium">
+                                    <?php echo $statusText; ?>
+                                </span>
+                            </div>
+                            
+                            <?php if ($facility['requires_payment']): ?>
+                                <div class="flex justify-between text-sm mb-3">
+                                    <span class="text-gray-500">Fee:</span>
+                                    <span class="font-medium">₱<?php echo number_format($facility['payment_amount'], 2); ?></span>
+                                </div>
                             <?php endif; ?>
+                            
+                            <div class="mt-4">
+                                <?php if ($facilityAvailable): ?>
+                                    <a href="index.php?page=reservation&resource_id=<?php echo $facility['id']; ?>" class="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition duration-300">Book Now</a>
+                                <?php else: ?>
+                                    <button disabled class="inline-block px-4 py-2 bg-gray-300 text-gray-600 rounded cursor-not-allowed">Currently Unavailable</button>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -120,40 +129,51 @@ try {
         <?php if (empty($equipment)): ?>
             <p class="text-gray-600">No equipment available at this time.</p>
         <?php else: ?>
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white rounded-lg overflow-hidden shadow-md">
-                    <thead class="bg-blue-600 text-white">
-                        <tr>
-                            <th class="py-3 px-4 text-left">Item</th>
-                            <th class="py-3 px-4 text-left">Description</th>
-                            <th class="py-3 px-4 text-center">Available Quantity</th>
-                            <th class="py-3 px-4 text-center">Status</th>
-                            <th class="py-3 px-4 text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        <?php foreach ($equipment as $item): ?>
-                            <tr class="hover:bg-gray-50">
-                                <td class="py-3 px-4"><?php echo $item['name']; ?></td>
-                                <td class="py-3 px-4"><?php echo $item['description']; ?></td>
-                                <td class="py-3 px-4 text-center"><?php echo $item['available_quantity']; ?></td>
-                                <td class="py-3 px-4 text-center">
-                                    <span class="inline-block px-2 py-1 rounded text-xs font-medium
-                                        <?php echo $item['availability'] === 'available' ? 'bg-green-100 text-green-800' : ($item['availability'] === 'reserved' ? 'bg-orange-100 text-orange-800' : 'bg-red-100 text-red-800'); ?>">
-                                        <?php echo ucfirst($item['availability']); ?>
-                                    </span>
-                                </td>
-                                <td class="py-3 px-4 text-center">
-                                    <?php if ($item['availability'] === 'available' && $item['available_quantity'] > 0): ?>
-                                        <a href="index.php?page=reservation&resource_id=<?php echo $item['id']; ?>" class="inline-block px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition duration-300">Reserve</a>
-                                    <?php else: ?>
-                                        <button disabled class="inline-block px-3 py-1 bg-gray-300 text-gray-600 text-sm rounded cursor-not-allowed">Unavailable</button>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <?php foreach ($equipment as $item): ?>
+                    <?php
+                    // Check if equipment has image
+                    $hasImage = !empty($item['image']) && file_exists($item['image']);
+                    ?>
+                    <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
+                        <?php if ($hasImage): ?>
+                            <div class="h-48 bg-cover bg-center" style="background-image: url('<?php echo htmlspecialchars($item['image']); ?>')"></div>
+                        <?php endif; ?>
+                        
+                        <div class="p-6">
+                            <h3 class="text-lg font-semibold mb-2"><?php echo $item['name']; ?></h3>
+                            <p class="text-gray-600 mb-4"><?php echo $item['description']; ?></p>
+                            
+                            <div class="flex justify-between text-sm mb-2">
+                                <span class="text-gray-500">Available Quantity:</span>
+                                <span class="font-medium"><?php echo $item['available_quantity']; ?></span>
+                            </div>
+                            
+                            <div class="flex justify-between text-sm mb-3">
+                                <span class="text-gray-500">Status:</span>
+                                <span class="inline-block px-2 py-1 rounded text-xs font-medium
+                                    <?php echo $item['availability'] === 'available' ? 'bg-green-100 text-green-800' : ($item['availability'] === 'reserved' ? 'bg-orange-100 text-orange-800' : 'bg-red-100 text-red-800'); ?>">
+                                    <?php echo ucfirst($item['availability']); ?>
+                                </span>
+                            </div>
+                            
+                            <?php if ($item['requires_payment']): ?>
+                                <div class="flex justify-between text-sm mb-3">
+                                    <span class="text-gray-500">Fee:</span>
+                                    <span class="font-medium">₱<?php echo number_format($item['payment_amount'], 2); ?></span>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <div class="mt-4">
+                                <?php if ($item['availability'] === 'available' && $item['available_quantity'] > 0): ?>
+                                    <a href="index.php?page=reservation&resource_id=<?php echo $item['id']; ?>" class="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition duration-300">Reserve</a>
+                                <?php else: ?>
+                                    <button disabled class="inline-block px-4 py-2 bg-gray-300 text-gray-600 rounded cursor-not-allowed">Unavailable</button>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
             </div>
         <?php endif; ?>
     </div>

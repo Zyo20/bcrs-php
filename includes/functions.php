@@ -75,9 +75,9 @@ function uploadFile($file, $uploadDir, $allowedTypes = ['image/jpeg', 'image/png
     return false;
 }
 
-// Send SMS notification using Twilio API
+// Send SMS notification using Semaphore
 function sendSMS($phoneNumber, $message) {
-    // Load SMS configuration - using include instead of require_once to get the actual array
+    // Load SMS configuration
     $configPath = __DIR__ . '/../config/sms.php';
     
     // Check if config file exists
@@ -89,58 +89,70 @@ function sendSMS($phoneNumber, $message) {
     // Load config file and store the returned array
     $smsConfig = include $configPath;
     
-    // Verify config is an array
-    if (!is_array($smsConfig)) {
-        error_log("SMS configuration is not valid. Check that config/sms.php returns an array.");
+    // Verify config is an array and SMS is enabled
+    if (!is_array($smsConfig) || !isset($smsConfig['enabled']) || !$smsConfig['enabled']) {
+        error_log('SMS not sent: SMS is disabled or configuration is invalid.');
         return false;
     }
     
-    // Skip if SMS is disabled or credentials are not configured
-    if (!isset($smsConfig['enabled']) || 
-        !$smsConfig['enabled'] || 
-        empty($smsConfig['account_sid']) || 
-        empty($smsConfig['auth_token']) || 
-        empty($smsConfig['from_number'])) {
-        error_log('SMS not sent: SMS is disabled or Twilio credentials are not configured.');
-        return false;
-    }
-    
-    // Format phone number with international format for Twilio
-    // Philippines phone numbers should be in format: +63XXXXXXXXXX
-    if (substr($phoneNumber, 0, 1) === '0') {
-        // Remove leading 0 and add Philippines country code +63
-        $phoneNumber = '+63' . substr($phoneNumber, 1);
-    } elseif (substr($phoneNumber, 0, 1) !== '+') {
-        // If number doesn't start with +, add +63
-        $phoneNumber = '+63' . $phoneNumber;
+    // Format phone number for Philippines (Semaphore accepts multiple formats)
+    // The proper format for Philippines is +639XXXXXXXX or 09XXXXXXXX
+    if (substr($phoneNumber, 0, 2) === '09') {
+        // Keep the 09XXXXXXXXX format as Semaphore accepts this for Philippines
+        $formattedPhone = $phoneNumber;
+    } elseif (substr($phoneNumber, 0, 1) === '0') {
+        // Keep the 0XXXXXXXXX format
+        $formattedPhone = $phoneNumber;
+    } elseif (substr($phoneNumber, 0, 3) === '+63') {
+        // Keep the +63XXXXXXXXX format
+        $formattedPhone = $phoneNumber;
+    } else {
+        // If number doesn't start with 0, +63, or 09, add 0 prefix for Philippines
+        $formattedPhone = '0' . $phoneNumber;
     }
     
     // Remove any spaces or special characters
-    $phoneNumber = preg_replace('/[^0-9+]/', '', $phoneNumber);
+    $formattedPhone = preg_replace('/[^0-9+]/', '', $formattedPhone);
     
-    // Prepare the API endpoint
-    $url = $smsConfig['api_url'] . $smsConfig['account_sid'] . '/Messages.json';
+    error_log("Attempting to send SMS to: $formattedPhone");
+    
+    // Check if required Semaphore config is present
+    if (empty($smsConfig['semaphore']['api_key']) || empty($smsConfig['semaphore']['api_url'])) {
+        error_log('SMS not sent: Semaphore configuration is incomplete.');
+        return false;
+    }
+    
+    // Get Semaphore configuration
+    $apiKey = $smsConfig['semaphore']['api_key'];
+    $apiUrl = $smsConfig['semaphore']['api_url'];
+    $senderName = $smsConfig['semaphore']['sender_name'] ?? '';
+    
+    error_log("Using Semaphore API key: $apiKey");
+    error_log("Using Semaphore API URL: $apiUrl");
     
     // Prepare the request data
     $data = [
-        'To' => $phoneNumber,
-        'From' => $smsConfig['from_number'],
-        'Body' => $message
+        'apikey' => $apiKey,
+        'number' => $formattedPhone,
+        'message' => $message
     ];
+    
+    // Add sender name if available
+    if (!empty($senderName)) {
+        $data['sendername'] = $senderName;
+    }
     
     // Initialize cURL
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_URL, $apiUrl);
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    
-    // Set up Basic Authentication with Account SID and Auth Token
-    curl_setopt($ch, CURLOPT_USERPWD, $smsConfig['account_sid'] . ':' . $smsConfig['auth_token']);
-    
-    // Add SSL verification options
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+    
+    // Add a user-agent to avoid some API restrictions
+    curl_setopt($ch, CURLOPT_USERAGENT, 'BCRS-PHP/1.0');
     
     // Execute request and get response
     $response = curl_exec($ch);
@@ -148,8 +160,8 @@ function sendSMS($phoneNumber, $message) {
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     
     // Debug information
-    error_log("Twilio API call to: $url");
-    error_log("Phone number formatted as: $phoneNumber");
+    error_log("Semaphore API call to: $apiUrl");
+    error_log("Phone number formatted as: $formattedPhone");
     error_log("HTTP Status Code: $httpCode");
     if ($err) {
         error_log("cURL Error: $err");
@@ -165,14 +177,26 @@ function sendSMS($phoneNumber, $message) {
         error_log("Raw API response: " . $response);
         $result = json_decode($response, true);
         
-        // Twilio returns 201 Created on success
-        if ($httpCode === 201 && isset($result['sid'])) {
-            error_log("SMS sent successfully to $phoneNumber. Twilio SID: " . $result['sid']);
-            return true;
+        // Add detailed logging about the full API response
+        error_log("Full Semaphore response: " . print_r($result, true));
+        
+        // Semaphore returns a message_id on success and error on failure
+        if (isset($result['message_id'])) {
+            $messageId = $result['message_id'];
+            
+            error_log("SMS sent successfully to $formattedPhone. Message ID: $messageId");
+            return [
+                'success' => true,
+                'message' => "SMS sent successfully. Message ID: $messageId",
+                'messageId' => $messageId,
+            ];
         } else {
-            $errorMsg = isset($result['message']) ? $result['message'] : 'Unknown error';
-            error_log("SMS sending failed. Twilio error: " . $errorMsg);
-            return false;
+            $errorMsg = isset($result['error']) ? $result['error'] : 'Unknown error';
+            error_log("SMS sending failed. Semaphore error: " . $errorMsg);
+            return [
+                'success' => false,
+                'message' => "SMS sending failed: $errorMsg"
+            ];
         }
     }
 }
