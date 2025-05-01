@@ -69,8 +69,8 @@ try {
 
 // Get system stats
 try {
-    // Total users
-    $stmt = $db->prepare("SELECT COUNT(*) as count FROM users WHERE role = 'user'");
+    // Total users (all users in users table are now residents)
+    $stmt = $db->prepare("SELECT COUNT(*) as count FROM users");
     $stmt->execute();
     $totalUsers = $stmt->fetch()['count'];
     
@@ -189,6 +189,9 @@ switch ($section) {
         } else {
             include 'pages/admin/feedback/index.php';
         }
+        break;
+    case 'import_users':
+        include 'pages/admin/import_users.php';
         break;
     default:
         include 'pages/admin/default_admin_dashboard.php';

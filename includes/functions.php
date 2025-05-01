@@ -16,7 +16,8 @@ function isLoggedIn() {
 
 // Check if user is admin
 function isAdmin() {
-    return isset($_SESSION['user_id']) && $_SESSION['role'] === 'admin';
+    // Check for the new session variable
+    return isset($_SESSION['user_id']) && isset($_SESSION['is_admin']) && $_SESSION['is_admin'] === true;
 }
 
 // Redirect function
@@ -324,7 +325,7 @@ function approveReservation($db, $reservationId, $adminId, $notes = '') {
         }
         
         $stmt = $db->prepare("
-            INSERT INTO reservation_status_history (reservation_id, status, notes, created_by)
+            INSERT INTO reservation_status_history (reservation_id, status, notes, created_by_admin_id)
             VALUES (?, 'approved', ?, ?)
         ");
         $stmt->execute([$reservationId, $debugNotes, $adminId]);
@@ -359,7 +360,7 @@ function approveReservation($db, $reservationId, $adminId, $notes = '') {
                 
                 // Log this change to history
                 $stmt = $db->prepare("
-                    INSERT INTO reservation_status_history (reservation_id, status, notes, created_by)
+                    INSERT INTO reservation_status_history (reservation_id, status, notes, created_by_admin_id)
                     VALUES (?, 'equipment_update', ?, ?)
                 ");
                 $stmt->execute([
@@ -424,7 +425,7 @@ function rejectReservation($db, $reservationId, $adminId, $notes = '') {
         
         // Add status history entry
         $stmt = $db->prepare("
-            INSERT INTO reservation_status_history (reservation_id, status, notes, created_by)
+            INSERT INTO reservation_status_history (reservation_id, status, notes, created_by_admin_id)
             VALUES (?, 'cancelled', ?, ?)
         ");
         $stmt->execute([$reservationId, $notes ?: 'Reservation rejected by admin', $adminId]);

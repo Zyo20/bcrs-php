@@ -1,6 +1,6 @@
 -- Database Schema for Barangay Resource System
 
--- Users Table
+-- Users Table (Residents Only)
 CREATE TABLE IF NOT EXISTS `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `first_name` varchar(50) NOT NULL,
@@ -10,8 +10,21 @@ CREATE TABLE IF NOT EXISTS `users` (
   `contact_number` varchar(20) NOT NULL,
   `address` text NOT NULL,
   `id_proof` varchar(255) DEFAULT NULL,
-  `role` enum('admin', 'user') NOT NULL DEFAULT 'user',
   `status` enum('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+  `blacklisted` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Admins Table
+CREATE TABLE IF NOT EXISTS `admins` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `first_name` varchar(50) NOT NULL,
+  `last_name` varchar(50) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -79,9 +92,27 @@ CREATE TABLE IF NOT EXISTS `feedback` (
   CONSTRAINT `feedback_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Insert default admin user
-INSERT INTO `users` (`first_name`, `last_name`, `email`, `password`, `contact_number`, `address`, `role`, `status`) VALUES
-('Admin', 'User', 'admin@example.com', '$2y$10$HfzIhGCCaxqyaIdGgjARSuOKAcm1Uy82YfLuNaajn6JrjLWy9Sj/W', '09123456789', 'Barangay Office', 'admin', 'approved');
+-- Reservation Status History Table
+CREATE TABLE IF NOT EXISTS `reservation_status_history` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `reservation_id` int(11) NOT NULL,
+  `status` varchar(50) NOT NULL,
+  `notes` text,
+  `created_by_user_id` int(11) DEFAULT NULL,
+  `created_by_admin_id` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `reservation_id` (`reservation_id`),
+  KEY `created_by_user_id` (`created_by_user_id`),
+  KEY `created_by_admin_id` (`created_by_admin_id`),
+  CONSTRAINT `reservation_status_history_ibfk_1` FOREIGN KEY (`reservation_id`) REFERENCES `reservations` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `reservation_status_history_ibfk_2` FOREIGN KEY (`created_by_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `reservation_status_history_ibfk_3` FOREIGN KEY (`created_by_admin_id`) REFERENCES `admins` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Insert default admin user into admins table
+INSERT INTO `admins` (`first_name`, `last_name`, `email`, `password`) VALUES
+('Admin', 'User', 'admin@bcrs.com', '$$2y$10$7St3IGSoSHN8.UbzIzysFOWnWOzjq9OmP/oYnfmGD.xZCaFbCh.ie');
 -- Default password is "admin123" (hashed with bcrypt)
 
 -- Sample resources

@@ -203,6 +203,14 @@ try {
             <a href="index.php?page=admin" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150">
                 ← Back to Dashboard
             </a>
+            <!-- Add Import Users Button -->
+            <a href="index.php?page=admin&section=import_users" 
+               class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150">
+                <span class="flex items-center">
+                    <i class="fas fa-upload mr-2"></i> <!-- Using Font Awesome upload icon -->
+                    Import Users
+                </span>
+            </a>
             <a href="index.php?page=admin&section=export_csv&report_type=users_list&filter=<?php echo $filter; ?><?php echo !empty($search) ? '&search=' . urlencode($search) . '&search_field=' . urlencode($searchField) : ''; ?><?php echo $sortBy !== 'id' || $sortOrder !== 'desc' ? '&sort=' . $sortBy . '&order=' . $sortOrder : ''; ?>" 
                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150">
                 <span class="flex items-center">

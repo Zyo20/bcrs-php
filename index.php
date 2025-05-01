@@ -169,15 +169,15 @@ switch ($page) {
         include 'pages/cancel_reservation.php';
         break;
     case 'dashboard':
-        // Check if user is logged in and has user role
-        if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'user') {
+        // Check if user is logged in and is NOT an admin
+        if (!isLoggedIn() || isAdmin()) { // Changed condition to check if user is logged in AND is not an admin
             show404("You don't have permission to access that page.");
         }
         include 'pages/dashboard.php';
         break;
     case 'admin':
         // Check if user is admin
-        if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+        if (!isLoggedIn() || !isAdmin()) { // Changed condition to check if user is logged in AND is an admin
             show404("You don't have permission to access the admin panel.");
         }
         include 'pages/admin/index.php';

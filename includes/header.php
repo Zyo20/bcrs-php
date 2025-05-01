@@ -209,7 +209,7 @@ if (isset($_SESSION['user_id'])) {
                         <a href="index?page=resources" class="hover:bg-gray-700 px-3 py-2 rounded transition duration-200 flex items-center gap-2"><i class="fas fa-box-archive"></i> Resources</a>
                     <?php endif; ?>
                     <?php if (isLoggedIn()): ?>
-                        <?php if ($_SESSION['role'] === 'user'): ?>
+                        <?php if (!isAdmin()): ?>
                             <a href="index?page=reservation" class="hover:bg-gray-700 px-3 py-2 rounded transition duration-200 flex items-center gap-2"><i class="fas fa-calendar-plus"></i> Make Reservation</a>
                             <a href="index?page=dashboard" class="hover:bg-gray-700 px-3 py-2 rounded transition duration-200 flex items-center gap-2"><i class="fas fa-gauge-high"></i> My Dashboard</a>
                         <?php endif; ?>
@@ -245,7 +245,7 @@ if (isset($_SESSION['user_id'])) {
                             </button>
                             <div class="dropdown-menu hidden">
                                 <a href="index?page=edit_profile" class="dropdown-item flex items-center gap-2"><i class="fas fa-user-pen"></i> Edit Profile</a>
-                                <?php if ($_SESSION['role'] === 'user'): ?>
+                                <?php if (!isAdmin()): ?>
                                     <a href="index?page=feedback" class="dropdown-item flex items-center gap-2"><i class="fas fa-comment-dots"></i> Send Feedback</a>
                                 <?php endif; ?>
                                 <div class="dropdown-divider"></div>
@@ -279,11 +279,11 @@ if (isset($_SESSION['user_id'])) {
                             <?php else: ?>
                                 <a href="index?page=resources" class="hover:bg-blue-700 px-3 py-2 rounded transition duration-200 flex items-center gap-2"><i class="fas fa-box-archive"></i> Resources</a>
                             <?php endif; ?>
-                            <?php if (isLoggedIn() && $_SESSION['role'] === 'user'): ?>
+                            <?php if (isLoggedIn() && !isAdmin()): ?>
                                 <a href="index?page=reservation" class="hover:bg-blue-700 px-3 py-2 rounded transition duration-200 flex items-center gap-2"><i class="fas fa-calendar-plus"></i> Make Reservation</a>
                             <?php endif; ?>
                             <?php if (isLoggedIn()): ?>
-                                <?php if ($_SESSION['role'] === 'user'): ?>
+                                <?php if (!isAdmin()): ?>
                                     <a href="index?page=dashboard" class="hover:bg-blue-700 px-3 py-2 rounded transition duration-200 flex items-center gap-2"><i class="fas fa-gauge-high"></i> My Dashboard</a>
                                 <?php endif; ?>
                                 <?php if (isAdmin()): ?>
