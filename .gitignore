@@ -4,4 +4,6 @@
 /php_debug.log
 /test_login.php
 /test_sms.php
-/config/sms.php
+config/sms.php
+uploads
+bcrs-php.git

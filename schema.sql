@@ -31,6 +31,21 @@ CREATE TABLE IF NOT EXISTS `admins` (
   UNIQUE KEY `email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Masterlist Table
+CREATE TABLE IF NOT EXISTS `masterlist` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `last_name` varchar(50) NOT NULL,
+  `first_name` varchar(50) NOT NULL,
+  `middle_name` varchar(50) DEFAULT NULL,
+  `contact_number` varchar(20) NOT NULL,
+  `age` int(3) NOT NULL,
+  `year_of_residency` int(4) NOT NULL,
+  `purok` varchar(50) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Resources Table
 CREATE TABLE IF NOT EXISTS `resources` (
   `id` int(11) NOT NULL AUTO_INCREMENT,

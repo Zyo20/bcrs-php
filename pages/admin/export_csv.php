@@ -277,6 +277,40 @@ function getResourcesListReport($db, $filter = 'all', $sort = 'name_asc', $categ
     }
 }
 
+function getMasterlistReport($db, $filter = 'all', $search = '', $purok = '') {
+    // Build the SQL query based on filters
+    $query = "SELECT id, last_name, first_name, middle_name, contact_number, age, year_of_residency, purok, created_at FROM masterlist WHERE 1=1";
+    $params = [];
+
+    // Apply purok filter
+    if (!empty($purok) && in_array($purok, ['Purok 1', 'Purok 2', 'Purok 3', 'Purok 4', 'Purok 5', 'Purok 6'])) {
+        $query .= " AND purok = ?";
+        $params[] = $purok;
+    }
+
+    // Apply search
+    if (!empty($search)) {
+        $query .= " AND (last_name LIKE ? OR first_name LIKE ? OR middle_name LIKE ? OR contact_number LIKE ?)";
+        $searchParam = "%{$search}%";
+        $params[] = $searchParam;
+        $params[] = $searchParam;
+        $params[] = $searchParam;
+        $params[] = $searchParam;
+    }
+
+    // Apply sorting - default to last_name ASC
+    $query .= " ORDER BY last_name ASC, first_name ASC";
+
+    try {
+        $stmt = $db->prepare($query);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Error exporting masterlist: " . $e->getMessage());
+        return [];
+    }
+}
+
 // Get report data based on selected type
 $reportData = [];
 $exportType = isset($_GET['export_type']) ? $_GET['export_type'] : $reportType; // Use export_type if present
@@ -367,6 +401,30 @@ switch ($exportType) { // Changed from $reportType to $exportType
         fputcsv($output, ['Date', 'Revenue', 'Paid Reservations', 'Pending Payments']);
         foreach ($reportData as $row) {
             fputcsv($output, [$row['date'], $row['revenue'], $row['paid_reservations'], $row['pending_payments']]);
+        }
+        break;
+    case 'masterlist':
+        $filter = isset($_GET['filter']) ? $_GET['filter'] : 'all';
+        $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+        $purok = isset($_GET['purok']) ? $_GET['purok'] : '';
+
+        $reportData = getMasterlistReport($db, $filter, $search, $purok);
+        $filename = "Masterlist_" . date('Y-m-d') . ".csv";
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+        fputcsv($output, ['ID', 'Last Name', 'First Name', 'Middle Name', 'Contact Number', 'Age', 'Year of Residency', 'Purok', 'Date Added']);
+        foreach ($reportData as $row) {
+            fputcsv($output, [
+                $row['id'],
+                $row['last_name'],
+                $row['first_name'],
+                $row['middle_name'],
+                $row['contact_number'],
+                $row['age'],
+                $row['year_of_residency'],
+                $row['purok'],
+                $row['created_at']
+            ]);
         }
         break;
 }

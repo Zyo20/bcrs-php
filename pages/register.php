@@ -84,15 +84,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $idImage = uploadFile($_FILES['id_image'], 'uploads/ids');
         
         if ($idImage) {
-            // Hash the password
-            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            
-            // Save to database
+            // Check if resident is in the masterlist (for informational purposes only)
             try {
-                $stmt = $db->prepare("INSERT INTO users (first_name, middle_initial, last_name, address, contact_number, purok, id_type, id_image, email, password, role, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'user', 'pending')");
-                $stmt->execute([$firstName, $middleInitial, $lastName, $address, $contactNumber, $purok, $idType, $idImage, $email, $hashedPassword]);
+                $stmt = $db->prepare("SELECT COUNT(*) FROM masterlist WHERE last_name = ? AND first_name = ? AND contact_number = ?");
+                $stmt->execute([$lastName, $firstName, $contactNumber]);
+                $inMasterlist = $stmt->fetchColumn() > 0;
                 
-                // Set flash message
+                // Set status to pending for all registrations
+                $status = 'pending';
+                
+                // Hash the password
+                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                
+                // Save to database
+                $stmt = $db->prepare("INSERT INTO users (first_name, middle_initial, last_name, address, contact_number, purok, id_type, id_image, email, password, role, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'user', ?)");
+                $stmt->execute([$firstName, $middleInitial, $lastName, $address, $contactNumber, $purok, $idType, $idImage, $email, $hashedPassword, $status]);
+                
+                // Set flash message - all users now need approval
                 $_SESSION['flash_message'] = "Registration successful! Please wait for admin approval.";
                 $_SESSION['flash_type'] = "success";
                 

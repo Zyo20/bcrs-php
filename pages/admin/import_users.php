@@ -144,8 +144,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['user_file'])) {
 
 ?>
 
-<div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold text-blue-800 mb-6">Import Users from Excel</h1>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-blue-800">Import Users from Excel</h1>
+            <div class="flex items-center space-x-2">
+                <a href="index.php?page=admin&section=users" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150">
+                    ← Back to User Management
+                </a>
+            </div>
+        </div>
 
     <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative mb-6" role="alert">
         <strong class="font-bold">Instructions:</strong>
@@ -153,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['user_file'])) {
             <li>Upload an Excel file (.xls or .xlsx).</li>
             <li>The first row should be the header row.</li>
             <li>Required columns: <strong>First Name, Last Name, Email, Contact Number, Address</strong> (in that order).</li>
-            <li>Users will be imported with 'approved' status and a default password ('password123').</li>
+            <li>Residents will be imported with 'approved' status and a default password ('password123').</li>
             <li>Existing email addresses will be skipped.</li>
         </ul>
     </div>
@@ -195,10 +202,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['user_file'])) {
                 </button>
             </div>
         </form>
-    </div>
-
-    <div class="mt-6 text-center">
-        <a href="index?page=admin&sub_page=users" class="text-blue-600 hover:underline">&larr; Back to User Management</a>
     </div>
 
 </div>

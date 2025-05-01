@@ -193,6 +193,18 @@ switch ($section) {
     case 'import_users':
         include 'pages/admin/import_users.php';
         break;
+    case 'masterlist':
+        include 'pages/admin/masterlist.php';
+        break;
+    case 'add_masterlist_entry':
+        include 'pages/admin/add_masterlist_entry.php';
+        break;
+    case 'edit_masterlist_entry':
+        include 'pages/admin/edit_masterlist_entry.php';
+        break;
+    case 'import_masterlist':
+        include 'pages/admin/import_masterlist.php';
+        break;
     default:
         include 'pages/admin/default_admin_dashboard.php';
         break;
