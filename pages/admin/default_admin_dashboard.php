@@ -37,7 +37,7 @@ try {
 
 // Get user status counts for the Manage Users widget
 try {
-    $stmt = $db->prepare("SELECT status, COUNT(*) as count FROM users WHERE role = 'user' GROUP BY status");
+    $stmt = $db->prepare("SELECT status, COUNT(*) as count FROM users GROUP BY status");
     $stmt->execute();
     $userStatusCounts = [];
     while ($row = $stmt->fetch()) {
@@ -55,7 +55,6 @@ try {
     // Get recent users
     $stmt = $db->prepare("
         SELECT * FROM users 
-        WHERE role = 'user' 
         ORDER BY created_at DESC 
         LIMIT 5
     ");
@@ -70,7 +69,7 @@ try {
 // Get system stats
 try {
     // Total users
-    $stmt = $db->prepare("SELECT COUNT(*) as count FROM users WHERE role = 'user'");
+    $stmt = $db->prepare("SELECT COUNT(*) as count FROM users");
     $stmt->execute();
     $totalUsers = $stmt->fetch()['count'];
     
@@ -304,7 +303,7 @@ try {
                     <div class="text-lg font-semibold"><?php 
                     // Count blacklisted users
                     try {
-                        $stmt = $db->prepare("SELECT COUNT(*) as count FROM users WHERE role = 'user' AND blacklisted = 1");
+                        $stmt = $db->prepare("SELECT COUNT(*) as count FROM users blacklisted = 1");
                         $stmt->execute();
                         echo $stmt->fetch()['count'];
                     } catch (PDOException $e) {

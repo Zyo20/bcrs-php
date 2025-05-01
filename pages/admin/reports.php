@@ -150,7 +150,6 @@ function getUserRegistrationReport($db, $startDate, $endDate) {
             FROM 
                 users
             WHERE 
-                role = 'user' AND
                 DATE(created_at) BETWEEN :start_date AND :end_date
             GROUP BY 
                 DATE(created_at)

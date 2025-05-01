@@ -54,12 +54,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $db->prepare("UPDATE reservations SET payment_status = 'paid' WHERE id = ?");
             $stmt->execute([$reservationId]);
             
-            // Add status history entry
+            // Add status history entry - Using created_by_admin_id column to match your database structure
             $stmt = $db->prepare("
                 INSERT INTO reservation_status_history 
-                (reservation_id, status, notes, created_by)
-                VALUES (?, 'approved', ?, ?)
+                (reservation_id, status, notes, created_by_admin_id)
+                VALUES (?, 'paid', ?, ?)
             ");
+            
+            // Make sure user_id is valid before using it
+            if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+                throw new Exception("Admin session is invalid. Please log in again.");
+            }
+            
             $stmt->execute([$reservationId, $notes ?: 'Payment approved', $_SESSION['user_id']]);
             
             // Add notification for user
@@ -92,18 +98,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $db->prepare("UPDATE reservations SET payment_status = 'reject', status = 'cancelled' WHERE id = ?");
             $stmt->execute([$reservationId]);
             
-            // Add status history entry for payment rejection
+            // Add status history entry for payment rejection - Using created_by_admin_id column
             $stmt = $db->prepare("
                 INSERT INTO reservation_status_history 
-                (reservation_id, status, notes, created_by)
+                (reservation_id, status, notes, created_by_admin_id)
                 VALUES (?, 'reject', ?, ?)
             ");
             $stmt->execute([$reservationId, 'Payment rejected: ' . $notes, $_SESSION['user_id']]);
             
-            // Add status history entry for reservation cancellation
+            // Add status history entry for reservation cancellation - Using created_by_admin_id column
             $stmt = $db->prepare("
                 INSERT INTO reservation_status_history 
-                (reservation_id, status, notes, created_by)
+                (reservation_id, status, notes, created_by_admin_id)
                 VALUES (?, 'cancelled', ?, ?)
             ");
             $stmt->execute([$reservationId, 'Reservation cancelled due to payment rejection: ' . $notes, $_SESSION['user_id']]);
@@ -179,9 +185,12 @@ try {
 // Get reservation status history
 try {
     $stmt = $db->prepare("
-        SELECT rsh.*, u.first_name, u.last_name
+        SELECT rsh.*, 
+            COALESCE(u.first_name, a.first_name) as first_name,
+            COALESCE(u.last_name, a.last_name) as last_name
         FROM reservation_status_history rsh
-        JOIN users u ON rsh.created_by = u.id
+        LEFT JOIN users u ON rsh.created_by_user_id = u.id
+        LEFT JOIN admins a ON rsh.created_by_admin_id = a.id
         WHERE rsh.reservation_id = ?
         ORDER BY rsh.created_at DESC
     ");

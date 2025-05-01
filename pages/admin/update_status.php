@@ -12,7 +12,7 @@ $reservationId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $newStatus = isset($_GET['status']) ? $_GET['status'] : '';
 
 // Validate parameters
-if ($reservationId <= 0 || !in_array($newStatus, ['for_delivery', 'for_pickup'])) {
+if ($reservationId <= 0 || !in_array($newStatus, ['for_delivery', 'for_pickup', 'picked_up', 'returned'])) {
     $_SESSION['flash_message'] = "Invalid request parameters.";
     $_SESSION['flash_type'] = "error";
     header("Location: index?page=admin");
@@ -45,13 +45,17 @@ try {
         $notes = 'Items set for delivery by administrator.';
     } elseif ($newStatus === 'for_pickup') {
         $notes = 'Items ready for pickup by user.';
+    } elseif ($newStatus === 'picked_up') {
+        $notes = 'Items have been picked up by the requester.';
+    } elseif ($newStatus === 'returned') {
+        $notes = 'Items have been returned by the requester.';
     }
     
     $stmt = $db->prepare("
-        INSERT INTO reservation_status_history (reservation_id, status, notes, created_by)
+        INSERT INTO reservation_status_history (reservation_id, status, notes, created_by_admin_id)
         VALUES (?, ?, ?, ?)
     ");
-    $stmt->execute([$reservationId, $newStatus, $notes, $_SESSION['user_id']]);
+    $stmt->execute([$reservationId, $newStatus, $notes, $_SESSION['admin_id']]);
     
     // Get user contact information to send notification
     $stmt = $db->prepare("
@@ -70,6 +74,10 @@ try {
             $message = "Your reservation #$reservationId is set for delivery. Please prepare to receive your items.";
         } elseif ($newStatus === 'for_pickup') {
             $message = "Your reservation #$reservationId is ready for pickup. Please visit the barangay office to collect your items.";
+        } elseif ($newStatus === 'picked_up') {
+            $message = "Your reservation #$reservationId has been marked as picked up. Thank you for using our barangay resources.";
+        } elseif ($newStatus === 'returned') {
+            $message = "Your reservation #$reservationId has been marked as returned. Thank you for using our barangay resources.";
         }
         
         // Create notification

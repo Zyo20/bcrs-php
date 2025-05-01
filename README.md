@@ -172,10 +172,9 @@ cd /path/to/xampp/htdocs
 # Access via http://localhost/bcrs-php
 ```
 
-## Default Admin Account
+## Admin Account
 
-- Email Address: admin@bcrs.com
-- Password: admin123
+Create an admin account using http://localhost/bcrs-php/admin_setup.
 
 ## System Workflow
 

@@ -33,9 +33,18 @@ try {
 
     // Get the specific status history entry
     $stmt = $db->prepare("
-        SELECT rsh.*, u.first_name, u.last_name
+        SELECT 
+            rsh.*,
+            COALESCE(u.first_name, a.first_name) as first_name,
+            COALESCE(u.last_name, a.last_name) as last_name,
+            CASE 
+                WHEN rsh.created_by_user_id IS NOT NULL THEN 'user'
+                WHEN rsh.created_by_admin_id IS NOT NULL THEN 'admin'
+                ELSE 'system'
+            END as creator_type
         FROM reservation_status_history rsh
-        JOIN users u ON rsh.created_by = u.id
+        LEFT JOIN users u ON rsh.created_by_user_id = u.id
+        LEFT JOIN admins a ON rsh.created_by_admin_id = a.id
         WHERE rsh.id = ? AND rsh.reservation_id = ?
     ");
     $stmt->execute([$historyId, $reservationId]);

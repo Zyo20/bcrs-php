@@ -285,7 +285,7 @@ function approveReservation($db, $reservationId, $adminId, $notes = '') {
         
         // Check if payment is required but not yet confirmed
         if ($reservation['payment_status'] === 'pending') {
-            return [false, "Payment must be confirmed before approving this reservation."];
+            return [false, "Payment must be confirmed before approving this reservation."]; 
         }
         
         // Get reservation items to update quantities
@@ -318,17 +318,34 @@ function approveReservation($db, $reservationId, $adminId, $notes = '') {
         ");
         $stmt->execute([$reservationId]);
         
-        // Add status history entry with quantity debug info
-        $debugNotes = $notes ?: 'Reservation approved';
-        if (!empty($deductionLog)) {
-            $debugNotes .= "\nQuantity changes: " . implode("; ", $deductionLog);
+        // Check if the admin ID exists in the admins table
+        $stmt = $db->prepare("SELECT id FROM admins WHERE id = ?");
+        $stmt->execute([$adminId]);
+        $adminExists = $stmt->fetch();
+        
+        if (!$adminExists) {
+            // If the adminId doesn't exist in admins table, we have a problem
+            // Let's use the ID of the first admin user instead
+            $stmt = $db->prepare("SELECT id FROM admins LIMIT 1");
+            $stmt->execute();
+            $adminUser = $stmt->fetch();
+            
+            if ($adminUser) {
+                $adminId = $adminUser['id'];
+            } else {
+                // This is a critical error - no admins in the system
+                $db->rollBack();
+                return [false, "System error: No administrator account found."];
+            }
         }
         
+        // Insert into reservation_status_history with the admin ID in the correct column
+        $notes = $notes ?: 'Reservation approved';
         $stmt = $db->prepare("
             INSERT INTO reservation_status_history (reservation_id, status, notes, created_by_admin_id)
             VALUES (?, 'approved', ?, ?)
         ");
-        $stmt->execute([$reservationId, $debugNotes, $adminId]);
+        $stmt->execute([$reservationId, $notes, $adminId]);
         
         // Update resource availability and quantities
         foreach ($items as $item) {
@@ -358,7 +375,7 @@ function approveReservation($db, $reservationId, $adminId, $notes = '') {
                 ");
                 $stmt->execute([$newQty, $newQty, $item['resource_id']]);
                 
-                // Log this change to history
+                // Log this change to history - also using the correct admin_id column
                 $stmt = $db->prepare("
                     INSERT INTO reservation_status_history (reservation_id, status, notes, created_by_admin_id)
                     VALUES (?, 'equipment_update', ?, ?)
@@ -391,7 +408,7 @@ function approveReservation($db, $reservationId, $adminId, $notes = '') {
 }
 
 // Reject a reservation
-function rejectReservation($db, $reservationId, $adminId, $notes = '') {
+function rejectReservation($db, $reservationId, $adminId, $reason = '') {
     try {
         // Begin transaction
         $db->beginTransaction();
@@ -410,38 +427,109 @@ function rejectReservation($db, $reservationId, $adminId, $notes = '') {
             return [false, "Reservation not found."];
         }
         
-        // Check if reservation is in pending status
-        if ($reservation['status'] !== 'pending') {
-            return [false, "Only pending reservations can be rejected."];
+        // Check if reservation can be rejected
+        if (!in_array($reservation['status'], ['pending', 'approved'])) {
+            return [false, "Only pending or approved reservations can be rejected."];
         }
         
         // Update reservation status
         $stmt = $db->prepare("
             UPDATE reservations 
-            SET status = 'cancelled' 
+            SET status = 'rejected' 
             WHERE id = ?
         ");
         $stmt->execute([$reservationId]);
         
-        // Add status history entry
+        // Check if the admin ID exists in admins table
+        $stmt = $db->prepare("SELECT id FROM admins WHERE id = ?");
+        $stmt->execute([$adminId]);
+        $adminExists = $stmt->fetch();
+        
+        if (!$adminExists) {
+            // If the adminId doesn't exist in admins table, use the first admin instead
+            $stmt = $db->prepare("SELECT id FROM admins LIMIT 1");
+            $stmt->execute();
+            $adminUser = $stmt->fetch();
+            
+            if ($adminUser) {
+                $adminId = $adminUser['id'];
+            } else {
+                // This is a critical error - no admins in the system
+                $db->rollBack();
+                return [false, "System error: No administrator account found."];
+            }
+        }
+        
+        // Add status history entry - using the correct admin_id column
+        $notes = $reason ?: 'Reservation rejected';
         $stmt = $db->prepare("
             INSERT INTO reservation_status_history (reservation_id, status, notes, created_by_admin_id)
-            VALUES (?, 'cancelled', ?, ?)
+            VALUES (?, 'rejected', ?, ?)
         ");
-        $stmt->execute([$reservationId, $notes ?: 'Reservation rejected by admin', $adminId]);
+        $stmt->execute([$reservationId, $notes, $adminId]);
+        
+        // Return any allocated resources to inventory if reservation was previously approved
+        if ($reservation['status'] === 'approved') {
+            // Get reservation items to update quantities
+            $stmt = $db->prepare("
+                SELECT ri.*, r.category, r.quantity as current_quantity, r.name as resource_name
+                FROM reservation_items ri
+                JOIN resources r ON ri.resource_id = r.id
+                WHERE ri.reservation_id = ?
+            ");
+            $stmt->execute([$reservationId]);
+            $items = $stmt->fetchAll();
+            
+            foreach ($items as $item) {
+                if ($item['category'] === 'facility') {
+                    // Mark facilities as available again
+                    $stmt = $db->prepare("
+                        UPDATE resources 
+                        SET availability = 'available'
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$item['resource_id']]);
+                } else if ($item['category'] === 'equipment') {
+                    // Increment quantities
+                    $newQuantity = $item['current_quantity'] + (int)$item['quantity'];
+                    $stmt = $db->prepare("
+                        UPDATE resources 
+                        SET quantity = ?,
+                            availability = 'available'
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$newQuantity, $item['resource_id']]);
+                    
+                    // Log this change to history - also using the correct admin_id column
+                    $stmt = $db->prepare("
+                        INSERT INTO reservation_status_history (reservation_id, status, notes, created_by_admin_id)
+                        VALUES (?, 'equipment_update', ?, ?)
+                    ");
+                    $stmt->execute([
+                        $reservationId, 
+                        "Updated {$item['resource_name']} quantity from {$item['current_quantity']} to {$newQuantity} (returned {$item['quantity']})", 
+                        $adminId
+                    ]);
+                }
+            }
+        }
         
         // Add notification for user
         $userNotificationLink = "index.php?page=view_reservation&id=" . $reservationId; // Link for the user
-        // Include the rejection reason in the message for clarity
-        $rejectionMessage = "Your reservation #$reservationId has been rejected.";
-        if (!empty($notes)) {
-            $rejectionMessage .= " Reason: " . htmlspecialchars($notes);
+        $notificationMessage = "Your reservation #$reservationId has been rejected.";
+        if (!empty($reason)) {
+            $notificationMessage .= " Reason: " . substr($reason, 0, 100);
+            if (strlen($reason) > 100) $notificationMessage .= "...";
         }
-        createNotification($reservation['user_id'], $rejectionMessage, $userNotificationLink);
+        createNotification($reservation['user_id'], $notificationMessage, $userNotificationLink);
         
         // Send SMS notification (if configured)
         if (!empty($reservation['contact_number'])) {
-            $message = "Your reservation #$reservationId has been rejected. Please check your dashboard for details.";
+            $message = "Your reservation #$reservationId has been rejected.";
+            if (!empty($reason)) {
+                $message .= " Reason: " . substr($reason, 0, 50);
+                if (strlen($reason) > 50) $message .= "...";
+            }
             sendSMS($reservation['contact_number'], $message);
         }
         

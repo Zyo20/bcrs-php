@@ -33,7 +33,7 @@ try {
     }
     
     // Check if reservation can be marked as returned
-    $validStatuses = ['approved', 'for_delivery', 'for_pickup'];
+    $validStatuses = ['approved', 'for_delivery', 'for_pickup', 'picked_up', 'completed'];
     if (!in_array($reservation['status'], $validStatuses)) {
         throw new Exception("This reservation cannot be marked as returned in its current status");
     }
@@ -58,10 +58,15 @@ try {
     ");
     $stmt->execute([$reservationId]);
     
+    // Use the admin ID from session instead of user_id
+    if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+        throw new Exception("Admin session is invalid. Please log in again.");
+    }
+    
     // Add status history
     $stmt = $db->prepare("
         INSERT INTO reservation_status_history 
-        (reservation_id, status, notes, created_by)
+        (reservation_id, status, notes, created_by_admin_id)
         VALUES (?, 'completed', 'Items marked as returned', ?)
     ");
     $stmt->execute([$reservationId, $_SESSION['user_id']]);

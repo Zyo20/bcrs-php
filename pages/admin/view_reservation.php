@@ -54,9 +54,18 @@ try {
     
     // Get reservation status history
     $stmt = $db->prepare("
-        SELECT rsh.*, u.first_name, u.last_name
+        SELECT 
+            rsh.*,
+            COALESCE(u.first_name, a.first_name) as first_name,
+            COALESCE(u.last_name, a.last_name) as last_name,
+            CASE 
+                WHEN rsh.created_by_user_id IS NOT NULL THEN 'user'
+                WHEN rsh.created_by_admin_id IS NOT NULL THEN 'admin'
+                ELSE 'system'
+            END as creator_type
         FROM reservation_status_history rsh
-        JOIN users u ON rsh.created_by = u.id
+        LEFT JOIN users u ON rsh.created_by_user_id = u.id
+        LEFT JOIN admins a ON rsh.created_by_admin_id = a.id
         WHERE rsh.reservation_id = ?
         ORDER BY rsh.created_at DESC
     ");
@@ -78,10 +87,14 @@ function getStatusBadge($status) {
             return '<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">For Delivery</span>';
         case 'for_pickup':
             return '<span class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-medium">For Pickup</span>';
+        case 'picked_up':
+            return '<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">Picked Up</span>';
         case 'completed':
             return '<span class="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-medium">Completed</span>';
         case 'cancelled':
             return '<span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">Cancelled</span>';
+        case 'returned':
+            return '<span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">Returned</span>';
         default:
             return '<span class="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-medium">' . ucfirst($status) . '</span>';
     }
@@ -260,13 +273,20 @@ function getPaymentStatusBadge($status) {
                     }
                 }
                 ?>
-                
                 <?php if ($hasEquipment): ?>
                 <a href="index?page=admin&section=update_status&id=<?php echo $reservation['id']; ?>&status=for_delivery" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     <svg class="h-4 w-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                     </svg>
                     For Delivery
+                </a>
+                <?php else: ?>
+                <!-- If reservation contains only facilities, show Mark as Completed button -->
+                <a href="index?page=admin&section=mark_completed&id=<?php echo $reservation['id']; ?>" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" onclick="return confirm('Are you sure you want to mark this reservation as completed?')">
+                    <svg class="h-4 w-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Mark as Completed
                 </a>
                 <?php endif; ?>
             </div>
@@ -281,15 +301,24 @@ function getPaymentStatusBadge($status) {
             </div>
         <?php elseif ($reservation['status'] === 'for_pickup'): ?>
             <div class="flex flex-wrap gap-2 mt-6">
-                <a href="index?page=admin&section=mark_completed&id=<?php echo $reservation['id']; ?>" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" onclick="return confirm('Are you sure you want to mark this reservation as completed?')">
+                <a href="index?page=admin&section=update_status&id=<?php echo $reservation['id']; ?>&status=picked_up" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
                     <svg class="h-4 w-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                     </svg>
-                    Mark as Completed
+                    Picked Up
+                </a>
+            </div>
+        <?php elseif ($reservation['status'] === 'picked_up'): ?>
+            <div class="flex flex-wrap gap-2 mt-6">
+                <a href="index?page=admin&section=mark_returned&id=<?php echo $reservation['id']; ?>" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500" onclick="return confirm('Are you sure these items have been returned?')">
+                    <svg class="h-4 w-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Mark as Returned and Completed
                 </a>
             </div>
         <?php endif; ?>
-    </div>
+        </div>
     
     <div class="bg-white rounded-lg shadow-md p-6">
         <h2 class="text-xl font-semibold mb-4">Status History</h2>
@@ -302,14 +331,59 @@ function getPaymentStatusBadge($status) {
                     <div class="p-3 border-l-4 <?php echo $history['status'] === 'cancelled' ? 'border-red-400' : ($history['status'] === 'approved' ? 'border-green-400' : 'border-blue-400'); ?> rounded">
                         <div class="flex justify-between">
                             <div>
-                                <p class="font-medium"><?php echo ucfirst($history['status']); ?></p>
+                                <p class="font-medium">
+                                    <?php
+                                    // Display status with descriptive text
+                                    switch($history['status']) {
+                                        case 'pending':
+                                            echo 'Reservation Submitted';
+                                            break;
+                                        case 'approved':
+                                            echo 'Reservation Approved';
+                                            break;
+                                        case 'cancelled':
+                                            echo 'Reservation Cancelled';
+                                            break;
+                                        case 'completed':
+                                            echo 'Reservation Completed';
+                                            break;
+                                        case 'for_delivery':
+                                            echo 'Items Set for Delivery';
+                                            break;
+                                        case 'for_pickup':
+                                            echo 'Items Ready for Pickup';
+                                            break;
+                                        case 'reject':
+                                            echo 'Payment Rejected';
+                                            break;
+                                        case 'equipment_update':
+                                            echo 'Equipment Quantities Updated';
+                                            break;
+                                        case 'paid':
+                                            echo 'Payment Approved';
+                                            break;
+                                        default:
+                                            echo ucfirst($history['status']);
+                                    }
+                                    ?>
+                                </p>
                                 <?php if (!empty($history['notes'])): ?>
                                     <p class="text-gray-600 mt-1"><?php echo $history['notes']; ?></p>
                                 <?php endif; ?>
                             </div>
                             <div class="text-right">
                                 <p class="text-sm text-gray-500"><?php echo formatDate($history['created_at']); ?></p>
-                                <p class="text-xs text-gray-500 mt-1">by <?php echo $history['first_name'] . ' ' . $history['last_name']; ?></p>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    <?php if (!empty($history['first_name']) && !empty($history['last_name'])): ?>
+                                        Updated by: <?php echo $history['first_name'] . ' ' . $history['last_name']; ?>
+                                    <?php elseif ($history['created_by_admin_id']): ?>
+                                        Updated by: Admin User
+                                    <?php elseif ($history['created_by_user_id']): ?>
+                                        Updated by: User
+                                    <?php else: ?>
+                                        Updated by: System
+                                    <?php endif; ?>
+                                </p>
                             </div>
                         </div>
                     </div>

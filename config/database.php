@@ -1,7 +1,7 @@
 <?php
 // Database Configuration
 $host = 'localhost';
-$dbname = 'barangay_resource_system';
+$dbname = 'bcrs';
 $username = 'root';
 $password = '';
 

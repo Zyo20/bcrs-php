@@ -68,15 +68,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Add status history
             $stmt = $db->prepare("
-                INSERT INTO reservation_status_history (reservation_id, status, notes, created_by)
+                INSERT INTO reservation_status_history (reservation_id, status, notes, created_by_user_id)
                 VALUES (?, 'pending', 'Reservation submitted', ?)
             ");
-            $stmt->execute([$reservationId, $userId]);
+            
+            // Make sure user_id is valid before using it
+            if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+                throw new Exception("User session is invalid. Please log in again.");
+            }
+            
+            $stmt->execute([$reservationId, $_SESSION['user_id']]);
             
             // Add notification for admin
             $stmt = $db->prepare("
                 INSERT INTO notifications (user_id, message, link)
-                SELECT id, ?, ? FROM users WHERE role = 'admin'
+                SELECT id, ?, ? FROM users
             ");
             $stmt->execute([
                 "New reservation request from {$_SESSION['user_name']}. Reservation ID: $reservationId",
@@ -176,15 +182,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Add status history
             $stmt = $db->prepare("
-                INSERT INTO reservation_status_history (reservation_id, status, notes, created_by)
+                INSERT INTO reservation_status_history (reservation_id, status, notes, created_by_user_id)
                 VALUES (?, 'pending', 'Reservation submitted', ?)
             ");
-            $stmt->execute([$reservationId, $userId]);
+            
+            // Make sure user_id is valid before using it
+            if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+                throw new Exception("User session is invalid. Please log in again.");
+            }
+            
+            $stmt->execute([$reservationId, $_SESSION['user_id']]);
             
             // Add notification for admin
             $stmt = $db->prepare("
                 INSERT INTO notifications (user_id, message, link)
-                SELECT id, ?, ? FROM users WHERE role = 'admin'
+                SELECT id, ?, ? FROM users
             ");
             $stmt->execute([
                 "New reservation request from {$_SESSION['user_name']}. Reservation ID: $reservationId",

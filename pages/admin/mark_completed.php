@@ -52,10 +52,10 @@ try {
     // Add status history entry
     $stmt = $db->prepare("
         INSERT INTO reservation_status_history 
-        (reservation_id, status, notes, created_by)
+        (reservation_id, status, notes, created_by_admin_id)
         VALUES (?, 'completed', 'Reservation marked as completed', ?)
     ");
-    $stmt->execute([$reservationId, $_SESSION['user_id']]);
+    $stmt->execute([$reservationId, $_SESSION['admin_id']]);
     
     // Create notification for the user
     $message = "Your reservation #" . $reservationId . " has been marked as completed. Thank you for using our services!";

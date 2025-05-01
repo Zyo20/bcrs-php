@@ -54,9 +54,18 @@ try {
     
     // Get reservation status history
     $stmt = $db->prepare("
-        SELECT rsh.*, u.first_name, u.last_name
+        SELECT 
+            rsh.*,
+            COALESCE(u.first_name, a.first_name) as first_name,
+            COALESCE(u.last_name, a.last_name) as last_name,
+            CASE 
+                WHEN rsh.created_by_user_id IS NOT NULL THEN 'user'
+                WHEN rsh.created_by_admin_id IS NOT NULL THEN 'admin'
+                ELSE 'system'
+            END as creator_type
         FROM reservation_status_history rsh
-        JOIN users u ON rsh.created_by = u.id
+        LEFT JOIN users u ON rsh.created_by_user_id = u.id
+        LEFT JOIN admins a ON rsh.created_by_admin_id = a.id
         WHERE rsh.reservation_id = ?
         ORDER BY rsh.created_at DESC
     ");
@@ -283,6 +292,9 @@ function getPaymentStatusBadge($status) {
                                         case 'equipment_update':
                                             echo 'Equipment Quantities Updated';
                                             break;
+                                        case 'paid':
+                                            echo 'Payment Approved';
+                                            break;
                                         default:
                                             echo ucfirst($history['status']);
                                     }
@@ -325,7 +337,17 @@ function getPaymentStatusBadge($status) {
                                         ?>
                                     </p>
                                 <?php endif; ?>
-                                <p class="text-xs text-gray-500 mt-1">Updated by: <?php echo $history['first_name'] . ' ' . $history['last_name']; ?></p>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    <?php if (!empty($history['first_name']) && !empty($history['last_name'])): ?>
+                                        Updated by: <?php echo $history['first_name'] . ' ' . $history['last_name']; ?>
+                                    <?php elseif ($history['created_by_admin_id']): ?>
+                                        Updated by: Admin User
+                                    <?php elseif ($history['created_by_user_id']): ?>
+                                        Updated by: User
+                                    <?php else: ?>
+                                        Updated by: System
+                                    <?php endif; ?>
+                                </p>
                             </div>
                             <div class="text-right">
                                 <p class="text-sm text-gray-500"><?php echo formatDate($history['created_at']); ?></p>

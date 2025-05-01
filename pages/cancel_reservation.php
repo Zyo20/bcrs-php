@@ -37,12 +37,24 @@ try {
     ");
     $stmt->execute([$reservationId]);
     
+    // Validate that the user ID exists in the users table before inserting into history
+    $userId = $_SESSION['user_id'];
+    $stmt = $db->prepare("SELECT id FROM users WHERE id = ?");
+    $stmt->execute([$userId]);
+    $userExists = $stmt->fetch();
+    
+    if (!$userExists) {
+        // If the user doesn't exist, use the reservation owner as fallback
+        $userId = $reservation['user_id'];
+    }
+    
     // Add status history entry
     $stmt = $db->prepare("
-        INSERT INTO reservation_status_history (reservation_id, status, notes, created_by)
+        INSERT INTO reservation_status_history (reservation_id, status, notes, created_by_user_id)
         VALUES (?, 'cancelled', 'Cancelled by user', ?)
     ");
-    $stmt->execute([$reservationId, $_SESSION['user_id']]);
+    
+    $stmt->execute([$reservationId, $userId]);
     
     // Add notification for admin
     $stmt = $db->prepare("

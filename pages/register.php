@@ -97,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
                 
                 // Save to database
-                $stmt = $db->prepare("INSERT INTO users (first_name, middle_initial, last_name, address, contact_number, purok, id_type, id_image, email, password, role, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'user', ?)");
+                $stmt = $db->prepare("INSERT INTO users (first_name, middle_initial, last_name, address, contact_number, purok, id_type, id_image, email, password, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$firstName, $middleInitial, $lastName, $address, $contactNumber, $purok, $idType, $idImage, $email, $hashedPassword, $status]);
                 
                 // Set flash message - all users now need approval
