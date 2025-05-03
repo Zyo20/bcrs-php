@@ -177,22 +177,4 @@ try {
             </div>
         <?php endif; ?>
     </div>
-    
-    <div class="bg-blue-50 rounded-lg p-6">
-        <h2 class="text-xl font-semibold text-blue-700 mb-3">Reservation Guidelines</h2>
-        
-        <ul class="list-disc pl-5 text-gray-700 space-y-2">
-            <li>Reservations must be made at least 3 days in advance</li>
-            <li>Gym bookings require payment via GCash</li>
-            <li>Maximum of 1 tent per reservation</li>
-            <li>Maximum of 20 chairs per reservation</li>
-            <li>All equipment must be returned in good condition</li>
-            <li>Cancellations should be made at least 24 hours before the reservation date</li>
-            <li>For special requests, please visit the barangay office</li>
-        </ul>
-        
-        <div class="mt-4">
-            <a href="index.php?page=reservation" class="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition duration-300">Make a Reservation</a>
-        </div>
-    </div>
 </div>

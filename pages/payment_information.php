@@ -79,10 +79,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $stmt->execute([$reservationId, $_SESSION['user_id']]);
             
-            // Add notification for admin
+            // Add notification for admin - Fix: Select from admins table instead of users
             $stmt = $db->prepare("
                 INSERT INTO notifications (user_id, message, link)
-                SELECT id, ?, ? FROM users
+                SELECT id, ?, ? FROM admins
             ");
             $stmt->execute([
                 "New reservation request from {$_SESSION['user_name']}. Reservation ID: $reservationId",
@@ -193,10 +193,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $stmt->execute([$reservationId, $_SESSION['user_id']]);
             
-            // Add notification for admin
+            // Add notification for admin - Fix: Select from admins table instead of users
             $stmt = $db->prepare("
                 INSERT INTO notifications (user_id, message, link)
-                SELECT id, ?, ? FROM users
+                SELECT id, ?, ? FROM admins
             ");
             $stmt->execute([
                 "New reservation request from {$_SESSION['user_name']}. Reservation ID: $reservationId",
