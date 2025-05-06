@@ -2,8 +2,8 @@
 // Database Configuration
 $host = 'localhost';
 $dbname = 'bcrs';
-$username = 'root';
-$password = '';
+$username = 'bcrs';
+$password = 'secure_password';
 
 try {
     $db = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);

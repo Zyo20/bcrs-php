@@ -124,7 +124,7 @@ function isInMasterlist($db, $firstName, $lastName) {
 }
 
 // Prepare the query based on filter, search and sort
-$query = "SELECT * FROM users ";
+$query = "SELECT * FROM users WHERE 1=1";
 $params = [];
 
 // Apply status filter
@@ -275,7 +275,7 @@ try {
                 <div class="text-lg font-semibold"><?php 
                     // Count blacklisted users
                     try {
-                        $stmt = $db->prepare("SELECT COUNT(*) as count FROM users  AND blacklisted = 1");
+                        $stmt = $db->prepare("SELECT COUNT(*) as count FROM users WHERE blacklisted = 1");
                         $stmt->execute();
                         echo $stmt->fetch()['count'];
                     } catch (PDOException $e) {

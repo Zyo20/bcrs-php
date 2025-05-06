@@ -303,7 +303,7 @@ try {
                     <div class="text-lg font-semibold"><?php 
                     // Count blacklisted users
                     try {
-                        $stmt = $db->prepare("SELECT COUNT(*) as count FROM users blacklisted = 1");
+                        $stmt = $db->prepare("SELECT COUNT(*) as count FROM users WHERE blacklisted = 1");
                         $stmt->execute();
                         echo $stmt->fetch()['count'];
                     } catch (PDOException $e) {
