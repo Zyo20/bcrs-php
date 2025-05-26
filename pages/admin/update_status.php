@@ -3,7 +3,7 @@
 if (!isLoggedIn() || !isAdmin()) {
     $_SESSION['flash_message'] = "You don't have permission to access this page.";
     $_SESSION['flash_type'] = "error";
-    header("Location: index?page=login");
+    header("Location: index.php?page=login");
     exit;
 }
 
@@ -12,7 +12,7 @@ $reservationId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $newStatus = isset($_GET['status']) ? $_GET['status'] : '';
 
 // Validate parameters
-if ($reservationId <= 0 || !in_array($newStatus, ['for_delivery', 'for_pickup', 'picked_up', 'returned'])) {
+if ($reservationId <= 0 || !in_array($newStatus, ['for_delivery', 'delivered', 'returned'])) {
     $_SESSION['flash_message'] = "Invalid request parameters.";
     $_SESSION['flash_type'] = "error";
     header("Location: index?page=admin");
@@ -43,6 +43,8 @@ try {
     $notes = '';
     if ($newStatus === 'for_delivery') {
         $notes = 'Items set for delivery by administrator.';
+    } elseif ($newStatus === 'delivered') {
+        $notes = 'Items have been delivered to the requester.';
     } elseif ($newStatus === 'for_pickup') {
         $notes = 'Items ready for pickup by user.';
     } elseif ($newStatus === 'picked_up') {
@@ -72,16 +74,14 @@ try {
         $message = '';
         if ($newStatus === 'for_delivery') {
             $message = "Your reservation #$reservationId is set for delivery. Please prepare to receive your items.";
-        } elseif ($newStatus === 'for_pickup') {
-            $message = "Your reservation #$reservationId is ready for pickup. Please visit the barangay office to collect your items.";
-        } elseif ($newStatus === 'picked_up') {
-            $message = "Your reservation #$reservationId has been marked as picked up. Thank you for using our barangay resources.";
+        } elseif ($newStatus === 'delivered') {
+            $message = "Your reservation #$reservationId has been delivered. Please take care of the borrowed items.";
         } elseif ($newStatus === 'returned') {
             $message = "Your reservation #$reservationId has been marked as returned. Thank you for using our barangay resources.";
         }
         
         // Create notification
-        $notifLink = "index?page=view_reservation&id=" . $reservationId;
+        $notifLink = "index.php?page=view_reservation&id=" . $reservationId;
         createNotification($userInfo['user_id'], $message, $notifLink);
         
         // Send SMS if configured and phone number is available
@@ -108,6 +108,6 @@ try {
 }
 
 // Redirect back to view reservation page
-header("Location: index?page=admin&section=view_reservation&id=" . $reservationId);
+header("Location: index.php?page=admin&section=view_reservation&id=" . $reservationId);
 exit;
 ?>

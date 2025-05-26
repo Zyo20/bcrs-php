@@ -1,6 +1,10 @@
 <?php
 session_start();
 
+// Save flash message for later
+$flashMessage = 'You have been successfully logged out.';
+$flashType = 'success';
+
 // Destroy all session data
 $_SESSION = array();
 
@@ -16,12 +20,12 @@ if (ini_get("session.use_cookies")) {
 // Destroy the session
 session_destroy();
 
-// Set a flash message
+// Start a new session for the flash message
 session_start();
-$_SESSION['flash_message'] = 'You have been successfully logged out.';
-$_SESSION['flash_type'] = 'success';
+$_SESSION['flash_message'] = $flashMessage;
+$_SESSION['flash_type'] = $flashType;
 
 // Redirect to home page without .php extension
-header("Location: ../index");
+header("Location: ../index?page=login");
 exit;
 ?>

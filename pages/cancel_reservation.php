@@ -59,7 +59,7 @@ try {
     // Add notification for admin
     $stmt = $db->prepare("
         INSERT INTO notifications (user_id, message, link)
-        SELECT id, ?, ? FROM users WHERE role = 'admin'
+        SELECT id, ?, ? FROM admins
     ");
     $stmt->execute(["Reservation #$reservationId has been cancelled by the user.", "index.php?page=admin&section=view_reservation&id=$reservationId"]);
     

@@ -16,9 +16,27 @@ if (isset($_GET['action'])) {
     switch ($action) {
         case 'approve':
             try {
+                // Get user details for SMS notification  
+                $stmt = $db->prepare("SELECT contact_number, first_name, last_name FROM users WHERE id = ?");
+                $stmt->execute([$userId]);
+                $user = $stmt->fetch();
+                
                 $stmt = $db->prepare("UPDATE users SET status = 'approved' WHERE id = ?");
                 $stmt->execute([$userId]);
-                $_SESSION['success_message'] = "User has been approved successfully.";
+                
+                // Send SMS notification to user about registration approval
+                if ($user && !empty($user['contact_number'])) {
+                    $smsMessage = "Your registration has been approved. You may now log in to the Barserve website.";
+                    $smsResult = sendSMS($user['contact_number'], $smsMessage);
+                    
+                    if ($smsResult['success']) {
+                        $_SESSION['success_message'] = "User has been approved and SMS notification sent successfully.";
+                    } else {
+                        $_SESSION['success_message'] = "User has been approved. SMS notification failed: " . $smsResult['message'];
+                    }
+                } else {
+                    $_SESSION['success_message'] = "User has been approved. No SMS sent (phone number not available).";
+                }
             } catch (PDOException $e) {
                 $_SESSION['error_message'] = "Error approving user: " . $e->getMessage();
             }

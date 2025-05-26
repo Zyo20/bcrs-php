@@ -135,15 +135,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("Invalid action.");
         }
         
-        // Redirect back to admin dashboard
-        header("Location: index.php?page=admin");
+        // Redirect to view reservation instead of dashboard
+        header("Location: index.php?page=admin&section=view_reservation&id=$reservationId");
         exit;
         
     } catch (Exception $e) {
         $db->rollBack();
         $_SESSION['flash_message'] = "Error: " . $e->getMessage();
         $_SESSION['flash_type'] = "error";
-        header("Location: index.php?page=admin");
+        header("Location: index.php?page=admin&section=view_reservation&id=$reservationId");
         exit;
     }
 }

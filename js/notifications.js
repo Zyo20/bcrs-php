@@ -236,8 +236,12 @@ function markAllNotificationsRead() {
  * Format timestamp to "time ago" format
  */
 function timeAgoFormat(timestamp) {
+    // Ensure timestamp is treated as Manila time (UTC+8)
+    // Convert timestamp format to include 'T' and add '+08:00' for Manila timezone
+    const formattedTimestamp = timestamp.replace(' ', 'T') + '+08:00';
+    
     const now = new Date();
-    const date = new Date(timestamp);
+    const date = new Date(formattedTimestamp);
     const seconds = Math.floor((now - date) / 1000);
     
     let interval = Math.floor(seconds / 31536000);

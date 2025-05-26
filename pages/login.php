@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $isAdmin = false;
                         }
                     } elseif ($resident['status'] === 'rejected') {
-                        $_SESSION['flash_message'] = "Your account has been blocked. Please contact the barangay office for assistance.";
+                        $_SESSION['flash_message'] = "Your account has been blocked. Please visit the barangay office for assistance.";
                         $_SESSION['flash_type'] = "error";
                     } else {
                         $_SESSION['flash_message'] = "Your account is still pending approval. Please wait for admin confirmation.";

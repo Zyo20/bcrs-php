@@ -9,56 +9,19 @@ if ($hasFlash) {
     unset($_SESSION['flash_message']);
     unset($_SESSION['flash_type']);
 }
-
-// Session timeout handling - expire after 5 minutes of inactivity
-$sessionTimeout = 300; // 5 minutes in seconds
-$currentTime = time();
-
-// Check if user is logged in and session timeout is applicable
-if (isset($_SESSION['user_id'])) {
-    // If last activity timestamp doesn't exist, create it
-    if (!isset($_SESSION['last_activity'])) {
-        $_SESSION['last_activity'] = $currentTime;
-    }
-    
-    // Check if session has expired
-    if (($currentTime - $_SESSION['last_activity']) > $sessionTimeout) {
-        // Session expired - destroy session and redirect to login
-        session_unset();
-        session_destroy();
-        
-        // Start a new session to allow setting a flash message
-        session_start();
-        
-        // Set a flash message to notify the user
-        $_SESSION['flash_message'] = "Your session has expired due to inactivity. Please log in again.";
-        $_SESSION['flash_type'] = "error";
-        
-        // Redirect to login page using the same format as the rest of the site
-        header("Location: index?page=login&session_expired=1");
-        exit;
-    }
-    
-    // Session is still valid, update last activity time
-    $_SESSION['last_activity'] = $currentTime;
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barangay Resource Management System</title>
+    <title>Barangay Resource Reservation Management System</title>
     <!-- Local Tailwind CSS -->
     <script src="js/tailwind.js"></script>
     <!-- Local Font Awesome for icons -->
     <link rel="stylesheet" href="includes/css/all.min.css">
     <!-- Notification System -->
     <script src="js/notifications.js"></script>
-    <!-- Session Monitor Script -->
-    <?php if (isset($_SESSION['user_id'])): ?>
-    <script src="js/session-monitor.js"></script>
-    <?php endif; ?>
     <!-- Custom styles -->
     <style>
         /* User dropdown styles */
@@ -181,22 +144,27 @@ if (isset($_SESSION['user_id'])) {
     </script>
 </head>
 <body class="bg-gray-300 flex flex-col min-h-screen">
-    <?php if (isset($_SESSION['user_id'])): ?>
-    <!-- Session monitor container - this element activates the session monitor -->
-    <div id="session-monitor-container" class="hidden" data-timeout="<?php echo $sessionTimeout; ?>"></div>
-    <?php endif; ?>
     
     <header class="bg-gray-600 text-white shadow-md">
         <div class="container mx-auto px-4 py-3">
             <div class="flex justify-between items-center">
                 <?php if (isLoggedIn()): ?>
                     <?php if (isAdmin()): ?>
-                        <a href="index?page=admin" class="text-xl font-bold">BARSERVE - Admin</a>
+                        <a href="index?page=admin" class="text-xl font-bold flex items-center">
+                            <img src="images/logo.png" alt="BARSERVE Logo" class="h-8 mr-2">
+                            BARSERVE - Admin
+                        </a>
                     <?php else: ?>
-                        <a href="index?page=dashboard" class="text-xl font-bold">BARSERVE</a>
+                        <a href="index?page=dashboard" class="text-xl font-bold flex items-center">
+                            <img src="images/logo.png" alt="BARSERVE Logo" class="h-8 mr-2">
+                            BARSERVE
+                        </a>
                     <?php endif; ?>
                 <?php else: ?>
-                    <a href="index" class="text-xl font-bold">BARSERVE</a>
+                    <a href="index" class="text-xl font-bold flex items-center">
+                        <img src="images/logo.png" alt="BARSERVE Logo" class="h-8 mr-2">
+                        BARSERVE
+                    </a>
                 <?php endif; ?>
                 
                 <nav class="hidden md:flex space-x-4">
@@ -244,7 +212,11 @@ if (isset($_SESSION['user_id'])) {
                                 <i class="fas fa-user"></i> <?php echo htmlspecialchars($_SESSION['user_name']); ?>
                             </button>
                             <div class="dropdown-menu hidden">
-                                <a href="index?page=edit_profile" class="dropdown-item flex items-center gap-2"><i class="fas fa-user-pen"></i> Edit Profile</a>
+                                <?php if (isAdmin()): ?>
+                                    <a href="index?page=admin&section=settings" class="dropdown-item flex items-center gap-2"><i class="fas fa-gear"></i> Settings</a>
+                                <?php else: ?>
+                                    <a href="index?page=edit_profile" class="dropdown-item flex items-center gap-2"><i class="fas fa-user-pen"></i> Edit Profile</a>
+                                <?php endif; ?>
                                 <?php if (!isAdmin()): ?>
                                     <a href="index?page=feedback" class="dropdown-item flex items-center gap-2"><i class="fas fa-comment-dots"></i> Send Feedback</a>
                                 <?php endif; ?>
@@ -291,7 +263,11 @@ if (isset($_SESSION['user_id'])) {
                                 <?php endif; ?>
                                 
                                 <div class="font-medium text-white flex items-center gap-2 px-3 py-2 border-t border-blue-500 mt-2"><i class="fas fa-user"></i> <?php echo htmlspecialchars($_SESSION['user_name']); ?></div>
-                                <a href="index?page=edit_profile" class="hover:bg-blue-700 px-3 py-2 pl-6 rounded transition duration-200 flex items-center gap-2"><i class="fas fa-user-pen"></i> Edit Profile</a>
+                                <?php if (isAdmin()): ?>
+                                    <a href="index?page=admin&section=settings" class="hover:bg-blue-700 px-3 py-2 pl-6 rounded transition duration-200 flex items-center gap-2"><i class="fas fa-gear"></i> Settings</a>
+                                <?php else: ?>
+                                    <a href="index?page=edit_profile" class="hover:bg-blue-700 px-3 py-2 pl-6 rounded transition duration-200 flex items-center gap-2"><i class="fas fa-user-pen"></i> Edit Profile</a>
+                                <?php endif; ?>
                                 <a href="includes/logout" class="hover:bg-blue-700 px-3 py-2 pl-6 rounded transition duration-200 flex items-center gap-2"><i class="fas fa-right-from-bracket"></i> Logout</a>
                             <?php else: ?>
                                 <a href="index?page=login" class="hover:bg-blue-700 px-3 py-2 rounded transition duration-200 flex items-center gap-2"><i class="fas fa-right-to-bracket"></i> Login</a>

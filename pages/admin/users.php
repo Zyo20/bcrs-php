@@ -8,13 +8,27 @@ if (isset($_GET['action']) && isset($_GET['user_id'])) {
     switch ($action) {
         case 'approve':
             try {
+                // Get user details for SMS notification
+                $stmt = $db->prepare("SELECT contact_number, first_name, last_name FROM users WHERE id = ?");
+                $stmt->execute([$userId]);
+                $user = $stmt->fetch();
+                
                 $stmt = $db->prepare("UPDATE users SET status = 'approved' WHERE id = ?");
                 $stmt->execute([$userId]);
                 
-                // Send approval notification to user (in a real system)
-                // sendApprovalNotification($userId);
-                
-                $_SESSION['success_message'] = "User has been approved.";
+                // Send SMS notification to user about registration approval
+                if ($user && !empty($user['contact_number'])) {
+                    $smsMessage = "Your registration has been approved. You may now log in to the Barserve website.";
+                    $smsResult = sendSMS($user['contact_number'], $smsMessage);
+                    
+                    if ($smsResult['success']) {
+                        $_SESSION['success_message'] = "User has been approved and SMS notification sent successfully.";
+                    } else {
+                        $_SESSION['success_message'] = "User has been approved. SMS notification failed: " . $smsResult['message'];
+                    }
+                } else {
+                    $_SESSION['success_message'] = "User has been approved. No SMS sent (phone number not available).";
+                }
             } catch (PDOException $e) {
                 $_SESSION['error_message'] = "Error approving user: " . $e->getMessage();
             }
@@ -223,7 +237,7 @@ try {
                     Masterlist
                 </span>
             </a>
-            <a href="index.php?page=admin&section=export_csv&report_type=users_list&filter=<?php echo $filter; ?><?php echo !empty($search) ? '&search=' . urlencode($search) . '&search_field=' . urlencode($searchField) : ''; ?><?php echo $sortBy !== 'id' || $sortOrder !== 'desc' ? '&sort=' . $sortBy . '&order=' . $sortOrder : ''; ?>" 
+            <a href="index.php?page=admin&section=export_users&filter=<?php echo $filter; ?><?php echo !empty($search) ? '&search=' . urlencode($search) . '&search_field=' . urlencode($searchField) : ''; ?><?php echo $sortBy !== 'id' || $sortOrder !== 'desc' ? '&sort=' . $sortBy . '&order=' . $sortOrder : ''; ?>" 
                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150">
                 <span class="flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">

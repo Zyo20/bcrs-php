@@ -1,4 +1,6 @@
 <?php
+// Set timezone to Asia/Manila (Philippines)
+date_default_timezone_set('Asia/Manila');
 // Get pending user registrations
 try {
     $stmt = $db->prepare("
@@ -143,6 +145,9 @@ switch ($section) {
     case 'export_csv':
         include 'pages/admin/export_csv.php';
         break;
+    case 'export_users':
+        include 'pages/admin/export_users.php';
+        break;
     case 'mark_returned':
         include 'pages/admin/mark_returned.php';
         break;
@@ -204,6 +209,9 @@ switch ($section) {
         break;
     case 'import_masterlist':
         include 'pages/admin/import_masterlist.php';
+        break;
+    case 'settings':
+        include 'pages/admin/settings.php';
         break;
     default:
         include 'pages/admin/default_admin_dashboard.php';

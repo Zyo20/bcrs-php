@@ -48,6 +48,7 @@ function verifyCSRFToken($token) {
 // Format date for display
 function formatDate($date, $format = 'd M Y, h:i A') {
     $dateObj = new DateTime($date);
+    $dateObj->setTimezone(new DateTimeZone('Asia/Manila')); // Explicitly set to Manila timezone
     return $dateObj->format($format);
 }
 
@@ -76,137 +77,50 @@ function uploadFile($file, $uploadDir, $allowedTypes = ['image/jpeg', 'image/png
     return false;
 }
 
-// Send SMS notification using Semaphore
+// Send SMS notification using the new settings-based system
 function sendSMS($phoneNumber, $message) {
-    // Load SMS configuration
-    $configPath = __DIR__ . '/../config/sms.php';
+    global $db;
     
-    // Check if config file exists
-    if (!file_exists($configPath)) {
-        error_log("SMS config file not found: $configPath");
-        return false;
+    // Include SMS utility if not already included
+    if (!class_exists('SMSUtil')) {
+        require_once __DIR__ . '/sms.php';
     }
     
-    // Load config file and store the returned array
-    $smsConfig = include $configPath;
+    // Create SMS utility instance
+    $sms = new SMSUtil($db);
     
-    // Verify config is an array and SMS is enabled
-    if (!is_array($smsConfig) || !isset($smsConfig['enabled']) || !$smsConfig['enabled']) {
-        error_log('SMS not sent: SMS is disabled or configuration is invalid.');
-        return false;
+    // Check if SMS is enabled
+    if (!$sms->isEnabled()) {
+        error_log('SMS not sent: SMS is disabled or not configured.');
+        return [
+            'success' => false,
+            'message' => 'SMS functionality is disabled or not configured'
+        ];
     }
     
-    // Format phone number for Philippines (Semaphore accepts multiple formats)
-    // The proper format for Philippines is +639XXXXXXXX or 09XXXXXXXX
-    if (substr($phoneNumber, 0, 2) === '09') {
-        // Keep the 09XXXXXXXXX format as Semaphore accepts this for Philippines
-        $formattedPhone = $phoneNumber;
-    } elseif (substr($phoneNumber, 0, 1) === '0') {
-        // Keep the 0XXXXXXXXX format
-        $formattedPhone = $phoneNumber;
-    } elseif (substr($phoneNumber, 0, 3) === '+63') {
-        // Keep the +63XXXXXXXXX format
-        $formattedPhone = $phoneNumber;
-    } else {
-        // If number doesn't start with 0, +63, or 09, add 0 prefix for Philippines
-        $formattedPhone = '0' . $phoneNumber;
+    // Send the SMS
+    return $sms->sendSMS($phoneNumber, $message);
+}
+
+// Send a reservation notification SMS
+function sendReservationSMS($reservationId, $phoneNumber, $status) {
+    global $db;
+    
+    // Include SMS utility if not already included
+    if (!class_exists('SMSUtil')) {
+        require_once __DIR__ . '/sms.php';
     }
     
-    // Remove any spaces or special characters
-    $formattedPhone = preg_replace('/[^0-9+]/', '', $formattedPhone);
+    // Create SMS utility instance
+    $sms = new SMSUtil($db);
     
-    error_log("Attempting to send SMS to: $formattedPhone");
-    
-    // Check if required Semaphore config is present
-    if (empty($smsConfig['semaphore']['api_key']) || empty($smsConfig['semaphore']['api_url'])) {
-        error_log('SMS not sent: Semaphore configuration is incomplete.');
-        return false;
-    }
-    
-    // Get Semaphore configuration
-    $apiKey = $smsConfig['semaphore']['api_key'];
-    $apiUrl = $smsConfig['semaphore']['api_url'];
-    $senderName = $smsConfig['semaphore']['sender_name'] ?? '';
-    
-    error_log("Using Semaphore API key: $apiKey");
-    error_log("Using Semaphore API URL: $apiUrl");
-    
-    // Prepare the request data
-    $data = [
-        'apikey' => $apiKey,
-        'number' => $formattedPhone,
-        'message' => $message
-    ];
-    
-    // Add sender name if available
-    if (!empty($senderName)) {
-        $data['sendername'] = $senderName;
-    }
-    
-    // Initialize cURL
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $apiUrl);
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-    
-    // Add a user-agent to avoid some API restrictions
-    curl_setopt($ch, CURLOPT_USERAGENT, 'BCRS-PHP/1.0');
-    
-    // Execute request and get response
-    $response = curl_exec($ch);
-    $err = curl_error($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    
-    // Debug information
-    error_log("Semaphore API call to: $apiUrl");
-    error_log("Phone number formatted as: $formattedPhone");
-    error_log("HTTP Status Code: $httpCode");
-    if ($err) {
-        error_log("cURL Error: $err");
-    }
-    
-    curl_close($ch);
-    
-    // Log results and return status
-    if ($err) {
-        error_log("SMS sending failed: " . $err);
-        return false;
-    } else {
-        error_log("Raw API response: " . $response);
-        $result = json_decode($response, true);
-        
-        // Add detailed logging about the full API response
-        error_log("Full Semaphore response: " . print_r($result, true));
-        
-        // Semaphore returns a message_id on success and error on failure
-        if (isset($result['message_id'])) {
-            $messageId = $result['message_id'];
-            
-            error_log("SMS sent successfully to $formattedPhone. Message ID: $messageId");
-            return [
-                'success' => true,
-                'message' => "SMS sent successfully. Message ID: $messageId",
-                'messageId' => $messageId,
-            ];
-        } else {
-            $errorMsg = isset($result['error']) ? $result['error'] : 'Unknown error';
-            error_log("SMS sending failed. Semaphore error: " . $errorMsg);
-            return [
-                'success' => false,
-                'message' => "SMS sending failed: $errorMsg"
-            ];
-        }
-    }
+    // Send notification
+    return $sms->sendReservationNotification($reservationId, $phoneNumber, $status);
 }
 
 // Show 404 page with custom error message
 function show404($message = null) {
-    global $db; // Make the database connection available
-    
-    // Set the HTTP status code to 404
+    // Set the response code to 404
     http_response_code(404);
     
     // Store the error message in session if provided
@@ -214,14 +128,8 @@ function show404($message = null) {
         $_SESSION['error_message'] = $message;
     }
     
-    // Include header
-    include 'includes/header.php';
-    
     // Include the 404 page
     include 'pages/404.php';
-    
-    // Include footer
-    include 'includes/footer.php';
     
     // Stop execution
     exit;

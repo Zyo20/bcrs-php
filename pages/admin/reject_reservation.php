@@ -34,8 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $_SESSION['flash_message'] = $message;
     $_SESSION['flash_type'] = $success ? "success" : "error";
     
-    // Redirect to admin dashboard
-    header("Location: index.php?page=admin");
+    // Redirect to view reservation instead of dashboard
+    header("Location: index.php?page=admin&section=view_reservation&id=$reservationId");
     exit;
 } else {
     // Display rejection confirmation form
@@ -60,13 +60,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($reservation['status'] !== 'pending') {
             $_SESSION['flash_message'] = "Only pending reservations can be rejected.";
             $_SESSION['flash_type'] = "error";
-            header("Location: index.php?page=admin");
+            header("Location: index.php?page=admin&section=view_reservation&id=$reservationId");
             exit;
         }
     } catch (PDOException $e) {
         $_SESSION['flash_message'] = "Error: " . $e->getMessage();
         $_SESSION['flash_type'] = "error";
-        header("Location: index.php?page=admin");
+        header("Location: index.php?page=admin&section=view_reservation&id=$reservationId");
         exit;
     }
 }

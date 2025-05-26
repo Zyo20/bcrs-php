@@ -195,7 +195,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <option value="Voter's ID" <?php echo (isset($idType) && $idType === "Voter's ID") ? 'selected' : ''; ?>>Voter's ID</option>
                             <option value="PhilHealth ID" <?php echo (isset($idType) && $idType === 'PhilHealth ID') ? 'selected' : ''; ?>>PhilHealth ID</option>
                             <option value="Postal ID" <?php echo (isset($idType) && $idType === 'Postal ID') ? 'selected' : ''; ?>>Postal ID</option>
-                            <option value="Barangay ID" <?php echo (isset($idType) && $idType === 'Barangay ID') ? 'selected' : ''; ?>>Barangay ID</option>
+                            <option value="Barangay Document" <?php echo (isset($idType) && $idType === 'Barangay Document') ? 'selected' : ''; ?>>Barangay Document</option>
+                            <option value="Others" <?php echo (isset($idType) && $idType === 'Others') ? 'selected' : ''; ?>>Others</option>
                         </select>
                     </div>
                     

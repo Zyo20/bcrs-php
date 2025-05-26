@@ -1,4 +1,7 @@
 <?php
+// Set timezone to Asia/Manila (Philippines)
+date_default_timezone_set('Asia/Manila');
+
 ob_start(); // Start output buffering
 session_start();
 require_once 'config/database.php';
@@ -118,6 +121,12 @@ if (isset($_GET['notification_action'])) {
 // Route handling
 $page = isset($_GET['page']) ? $_GET['page'] : 'home';
 
+// Special handling for AJAX endpoints
+if ($page === 'admin' && isset($_GET['section']) && $_GET['section'] === 'test_sms') {
+    include 'pages/admin/test_sms.php';
+    exit; // Prevent header and footer from being included
+}
+
 // Include header
 include 'includes/header.php';
 
@@ -232,9 +241,16 @@ switch ($page) {
         }
         include 'pages/view_feedback.php';
         break;
-    case 'test_sms':
-        include 'test_sms.php';
+              // Check if user is logged in
+        if (!isset($_SESSION['user_id'])) {
+            $_SESSION['flash_message'] = "Please login to view feedback.";
+            $_SESSION['flash_type'] = "error";
+            header("Location: index?page=login");
+            exit;
+        }
+        include 'pages/usercalendar=index.php';
         break;
+        
     default:
         // Show 404 page for invalid page requests
         show404("The page you requested was not found.");

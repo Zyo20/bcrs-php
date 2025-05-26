@@ -45,7 +45,6 @@ if (isset($_SESSION['flash_message'])) {
                         <option value="cancelled">Cancelled</option>
                         <option value="completed">Completed</option>
                         <option value="for_delivery">For Delivery</option>
-                        <option value="for_pickup">For Pickup</option>
                     </select>
                 </div>
                 

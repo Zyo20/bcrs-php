@@ -1,0 +1,15 @@
+2025-05-18 23:54:21: Export users started
+2025-05-18 23:54:21: Executing query: SELECT id, first_name, last_name, email, contact_number, address, status, blacklisted, created_at FROM users WHERE role = 'user' ORDER BY id desc
+2025-05-18 23:54:21: Error: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'role' in 'where clause'
+2025-05-18 23:56:07: Export users started
+2025-05-18 23:56:07: Executing query: SELECT id, first_name, last_name, email, contact_number, address, status, blacklisted, created_at FROM users WHERE 1=1 ORDER BY id desc
+2025-05-18 23:56:07: Found 6 users
+2025-05-18 23:56:07: CSV generation completed successfully
+2025-05-18 23:56:07: Export users started
+2025-05-18 23:56:07: Executing query: SELECT id, first_name, last_name, email, contact_number, address, status, blacklisted, created_at FROM users WHERE 1=1 ORDER BY id desc
+2025-05-18 23:56:07: Found 6 users
+2025-05-18 23:56:07: CSV generation completed successfully
+2025-05-18 23:56:07: Export users started
+2025-05-18 23:56:07: Executing query: SELECT id, first_name, last_name, email, contact_number, address, status, blacklisted, created_at FROM users WHERE 1=1 ORDER BY id desc
+2025-05-18 23:56:07: Found 6 users
+2025-05-18 23:56:07: CSV generation completed successfully

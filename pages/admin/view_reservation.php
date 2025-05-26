@@ -85,10 +85,8 @@ function getStatusBadge($status) {
             return '<span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">Approved</span>';
         case 'for_delivery':
             return '<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">For Delivery</span>';
-        case 'for_pickup':
-            return '<span class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-medium">For Pickup</span>';
-        case 'picked_up':
-            return '<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">Picked Up</span>';
+        case 'delivered':
+            return '<span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-xs font-medium">Delivered</span>';
         case 'completed':
             return '<span class="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-medium">Completed</span>';
         case 'cancelled':
@@ -164,6 +162,37 @@ function getPaymentStatusBadge($status) {
                     <p><span class="text-gray-600">End:</span> <?php echo formatDate($reservation['end_datetime']); ?></p>
                 </div>
             </div>
+            <?php 
+            // Calculate days difference
+            $startDate = new DateTime($reservation['start_datetime']);
+            $endDate = new DateTime($reservation['end_datetime']);
+            $interval = $startDate->diff($endDate);
+            $totalHours = ($interval->days * 24) + $interval->h;
+            $displayPeriod = $interval->days > 0 ? "{$interval->days} day" . ($interval->days > 1 ? "s" : "") : "";
+            if ($interval->h > 0) {
+                $displayPeriod .= $interval->days > 0 ? ", " : "";
+                $displayPeriod .= "{$interval->h} hour" . ($interval->h > 1 ? "s" : "");
+            }
+            if ($interval->i > 0 && $totalHours < 10) { // Only show minutes if less than 10 hours total
+                $displayPeriod .= !empty($displayPeriod) ? ", " : "";
+                $displayPeriod .= "{$interval->i} minute" . ($interval->i > 1 ? "s" : "");
+            }
+            ?>
+            <?php if (!empty($displayPeriod)): ?>
+                <div class="mt-2">
+                    <p><span class="text-gray-600">Duration:</span> <?php echo $displayPeriod; ?></p>
+                    <?php if (!empty($reservation['is_multi_day']) && $reservation['is_multi_day'] == 1): ?>
+                        <p class="mt-2">
+                            <span class="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 inline mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+                                </svg>
+                                Multi-Day Booking
+                            </span>
+                        </p>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
         </div>
         
         <div class="mb-6">
@@ -175,14 +204,29 @@ function getPaymentStatusBadge($status) {
                             <th class="py-2 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resource</th>
                             <th class="py-2 px-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                             <th class="py-2 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                            <th class="py-2 px-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Available</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
-                        <?php foreach ($reservationItems as $item): ?>
+                        <?php 
+                        $hasFacilitiesOnly = true;
+                        foreach ($reservationItems as $item): 
+                            // Check if this is not a facility-only reservation
+                            if ($item['category'] !== 'facility') {
+                                $hasFacilitiesOnly = false;
+                            }
+                            
+                            // Get the total available quantity of this resource
+                            $resourceStmt = $db->prepare("SELECT quantity FROM resources WHERE id = ?");
+                            $resourceStmt->execute([$item['resource_id']]);
+                            $resourceInfo = $resourceStmt->fetch();
+                            $availableQuantity = isset($resourceInfo['quantity']) ? $resourceInfo['quantity'] : 'N/A';
+                        ?>
                             <tr class="hover:bg-gray-50">
                                 <td class="py-2 px-3"><?php echo $item['name']; ?></td>
                                 <td class="py-2 px-3"><?php echo ucfirst($item['category']); ?></td>
-                                <td class="py-2 px-3 text-center"><?php echo $item['quantity']; ?></td>
+                                <td class="py-2 px-3 text-center font-medium"><?php echo $item['quantity']; ?></td>
+                                <td class="py-2 px-3 text-center text-gray-600"><?php echo $availableQuantity; ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -261,6 +305,10 @@ function getPaymentStatusBadge($status) {
             <div class="flex flex-wrap gap-3 mt-6 pt-4 border-t border-gray-200">
                 <a href="index.php?page=cancel_reservation&id=<?php echo $reservation['id']; ?>" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition duration-300" onclick="return confirm('Are you sure you want to cancel this reservation?')">Cancel Reservation</a>
             </div>
+        <?php elseif (!isAdmin() && $reservation['status'] === 'pending'): ?>
+            <div class="flex flex-wrap gap-3 mt-6 pt-4 border-t border-gray-200">
+                <a href="index.php?page=cancel_reservation&id=<?php echo $reservation['id']; ?>" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition duration-300" onclick="return confirm('Are you sure you want to cancel this reservation?')">Cancel Reservation</a>
+            </div>
         <?php elseif ($reservation['status'] === 'approved'): ?>
             <div class="flex flex-wrap gap-2 mt-6">
                 <?php
@@ -274,15 +322,15 @@ function getPaymentStatusBadge($status) {
                 }
                 ?>
                 <?php if ($hasEquipment): ?>
-                <a href="index?page=admin&section=update_status&id=<?php echo $reservation['id']; ?>&status=for_delivery" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <a href="index.php?page=admin&section=update_status&id=<?php echo $reservation['id']; ?>&status=for_delivery" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     <svg class="h-4 w-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                     </svg>
-                    For Delivery
+                    Mark For Delivery
                 </a>
                 <?php else: ?>
                 <!-- If reservation contains only facilities, show Mark as Completed button -->
-                <a href="index?page=admin&section=mark_completed&id=<?php echo $reservation['id']; ?>" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" onclick="return confirm('Are you sure you want to mark this reservation as completed?')">
+                <a href="index.php?page=admin&section=mark_completed&id=<?php echo $reservation['id']; ?>" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" onclick="return confirm('Are you sure you want to mark this reservation as completed?')">
                     <svg class="h-4 w-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
@@ -292,25 +340,16 @@ function getPaymentStatusBadge($status) {
             </div>
         <?php elseif ($reservation['status'] === 'for_delivery'): ?>
             <div class="flex flex-wrap gap-2 mt-6">
-                <a href="index?page=admin&section=update_status&id=<?php echo $reservation['id']; ?>&status=for_pickup" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                <a href="index.php?page=admin&section=update_status&id=<?php echo $reservation['id']; ?>&status=delivered" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     <svg class="h-4 w-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
-                    For Pickup
+                    Mark as Delivered
                 </a>
             </div>
-        <?php elseif ($reservation['status'] === 'for_pickup'): ?>
+        <?php elseif ($reservation['status'] === 'delivered'): ?>
             <div class="flex flex-wrap gap-2 mt-6">
-                <a href="index?page=admin&section=update_status&id=<?php echo $reservation['id']; ?>&status=picked_up" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
-                    <svg class="h-4 w-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                    </svg>
-                    Picked Up
-                </a>
-            </div>
-        <?php elseif ($reservation['status'] === 'picked_up'): ?>
-            <div class="flex flex-wrap gap-2 mt-6">
-                <a href="index?page=admin&section=mark_returned&id=<?php echo $reservation['id']; ?>" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500" onclick="return confirm('Are you sure these items have been returned?')">
+                <a href="index.php?page=admin&section=mark_returned&id=<?php echo $reservation['id']; ?>" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500" onclick="return confirm('Are you sure these items have been returned?')">
                     <svg class="h-4 w-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -350,14 +389,17 @@ function getPaymentStatusBadge($status) {
                                         case 'for_delivery':
                                             echo 'Items Set for Delivery';
                                             break;
-                                        case 'for_pickup':
-                                            echo 'Items Ready for Pickup';
+                                        case 'delivered':
+                                            echo 'Items Delivered';
                                             break;
                                         case 'reject':
                                             echo 'Payment Rejected';
                                             break;
                                         case 'equipment_update':
                                             echo 'Equipment Quantities Updated';
+                                            break;
+                                        case 'returned':
+                                            echo 'Items Returned and Completed';
                                             break;
                                         case 'paid':
                                             echo 'Payment Approved';

@@ -49,6 +49,29 @@ try {
     ");
     $stmt->execute([$reservationId]);
     
+    // Get reservation items to update facility availability
+    $stmt = $db->prepare("
+        SELECT ri.*, r.category, r.name as resource_name 
+        FROM reservation_items ri
+        JOIN resources r ON ri.resource_id = r.id
+        WHERE ri.reservation_id = ?
+    ");
+    $stmt->execute([$reservationId]);
+    $items = $stmt->fetchAll();
+    
+    // Update resource availability for facilities
+    foreach ($items as $item) {
+        if ($item['category'] === 'facility') {
+            // Mark facilities as available again
+            $stmt = $db->prepare("
+                UPDATE resources 
+                SET availability = 'available'
+                WHERE id = ?
+            ");
+            $stmt->execute([$item['resource_id']]);
+        }
+    }
+    
     // Add status history entry
     $stmt = $db->prepare("
         INSERT INTO reservation_status_history 

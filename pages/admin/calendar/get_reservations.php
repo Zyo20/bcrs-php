@@ -4,8 +4,9 @@ ob_clean();
 
 // Check if admin
 if (!isLoggedIn() || !isAdmin()) {
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Unauthorized access']);
+    $_SESSION['flash_message']= "You don't have permission to access this page";
+    $_SESSION['flash_type'] = "error";
+    header("Location: index.php");
     exit;
 }
 

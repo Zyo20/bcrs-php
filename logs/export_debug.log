@@ -1,0 +1,58 @@
+Export started at 2025-05-18 23:49:56
+REQUEST: Array
+(
+    [page] => admin
+    [section] => export_csv
+    [report_type] => users_list
+    [filter] => all
+)
+
+Entering users_list export case
+DIRECT TEST: Using static data
+Got 2 user records for export
+Finished users_list export
+Export started at 2025-05-18 23:49:56
+REQUEST: Array
+(
+    [page] => admin
+    [section] => export_csv
+    [report_type] => users_list
+    [filter] => all
+)
+
+Entering users_list export case
+DIRECT TEST: Using static data
+Got 2 user records for export
+Finished users_list export
+Export started at 2025-05-18 17:59:51
+REQUEST: Array
+(
+    [export_type] => resources
+    [filter] => all
+    [sort] => name_asc
+    [category] => 
+    [search] => 
+)
+
+Export started at 2025-05-18 18:00:09
+REQUEST: Array
+(
+    [report_type] => reservation
+    [start_date] => 2025-04-19
+    [end_date] => 2025-05-19
+)
+
+Export started at 2025-05-18 18:00:09
+REQUEST: Array
+(
+    [report_type] => reservation
+    [start_date] => 2025-04-19
+    [end_date] => 2025-05-19
+)
+
+Export started at 2025-05-18 18:00:25
+REQUEST: Array
+(
+    [export_type] => masterlist
+)
+

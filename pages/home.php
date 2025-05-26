@@ -1,5 +1,5 @@
 <div class="text-center mb-10">
-    <h1 class="text-3xl font-bold text-blue-800 mb-4">Barangay Resource Management System</h1>
+    <h1 class="text-3xl font-bold text-blue-800 mb-4">Barangay Resource Reservation Management System</h1>
     <p class="text-lg text-gray-600 max-w-3xl mx-auto">Streamlining resource management and booking within the barangay</p>
 </div>
 

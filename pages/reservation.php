@@ -34,7 +34,7 @@ try {
 
 // Get all active resources
 try {
-    // Modified query to account for pending reservations
+    // Modified query to account for approved reservations only (not pending)
     $stmt = $db->prepare("
         SELECT r.*, 
             CASE 
@@ -43,7 +43,7 @@ try {
                         SELECT SUM(ri.quantity) 
                         FROM reservation_items ri 
                         JOIN reservations res ON ri.reservation_id = res.id 
-                        WHERE ri.resource_id = r.id AND res.status IN ('pending', 'approved', 'for_delivery', 'for_pickup')
+                        WHERE ri.resource_id = r.id AND res.status IN ('approved', 'for_delivery', 'for_pickup')
                     ), 0) 
                 ELSE r.quantity 
             END as available_quantity,
@@ -52,7 +52,7 @@ try {
                     (SELECT COUNT(*) 
                     FROM reservation_items ri 
                     JOIN reservations res ON ri.reservation_id = res.id 
-                    WHERE ri.resource_id = r.id AND res.status IN ('pending', 'approved'))
+                    WHERE ri.resource_id = r.id AND res.status IN ('approved'))
                 ELSE 0
             END as has_pending_reservations
         FROM resources r
@@ -128,14 +128,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $endDateTime = $endDate . ' ' . $endTime;
     
     $currentDateTime = date('Y-m-d H:i:s');
-    $minDateTime = date('Y-m-d H:i:s', strtotime('+3 days'));
+    $minDateTime = date('Y-m-d H:i:s', strtotime('+0 day'));
     
     if ($startDateTime <= $currentDateTime) {
         $errors[] = "Start date must be in the future";
     }
     
     if ($startDateTime < $minDateTime) {
-        $errors[] = "Reservations must be made at least 3 days in advance";
+        $errors[] = "Reservations must be made at least 1 day in advance";
     }
     
     if ($endDateTime <= $startDateTime) {
@@ -164,9 +164,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Store resource name for payment page display
             $resourceNames[$resourceId] = $resource['name'];
             
+             // Apply maximum limits regardless of submitted quantity
+            if ($resource['category'] === 'equipment') {
+                if ($resource['name'] === 'Tent') {
+                    $quantity = min($quantity, 1); // Force max 1 tent
+                } elseif ($resource['name'] === 'Chairs') {
+                    $quantity = min($quantity, 20); // Force max 20 chairs
+                }
+                $resourceQuantities[$resourceId] = $quantity; // Update the quantity
+            }
+            
             // Check quantity limits
             if ($resource['category'] === 'equipment') {
-                if ($resource['name'] === 'Tent' && $quantity > 2) {
+                if ($resource['name'] === 'Tent' && $quantity > 1) {
                     $errors[] = "Maximum 1 tent per reservation";
                 } elseif ($resource['name'] === 'Chairs' && $quantity > 20) {
                     $errors[] = "Maximum 20 chairs per reservation";
@@ -174,6 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $errors[] = "Not enough {$resource['name']} available (requested: $quantity, available: {$resource['quantity']})";
                 }
             }
+            
             
             // Check for payment requirement
             if ($resource['requires_payment']) {
@@ -190,7 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     SELECT r.* FROM reservations r
                     JOIN reservation_items ri ON r.id = ri.reservation_id
                     WHERE ri.resource_id = ? 
-                    AND r.status NOT IN ('cancelled')
+                    AND r.status NOT IN ('cancelled', 'completed')
                     AND (
                         (r.start_datetime <= ? AND r.end_datetime >= ?) OR
                         (r.start_datetime <= ? AND r.end_datetime >= ?) OR
@@ -243,6 +254,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
+
 
 <div class="max-w-4xl mx-auto">
     <h1 class="text-2xl font-bold text-blue-800 mb-6">Make a Reservation</h1>
@@ -303,13 +315,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <h2 class="text-xl font-semibold text-blue-700 mb-3">Reservation Guidelines</h2>
                     
                     <ul class="list-disc pl-5 text-gray-700 space-y-2">
-                        <li>Reservations must be made at least 3 days in advance</li>
-                        <li>Gym bookings require payment via GCash</li>
-                        <li>Maximum of 1 tent per reservation</li>
+                        <li>Reservations must be made at least 1 day in advance</li>
+                        <li>Maximum of 2 tents per reservation</li>
                         <li>Maximum of 20 chairs per reservation</li>
+                        <li>Gym bookings require payment via GCash only</li>
+                        <li>Funeral reservation maximum 1 week only 2 tents and 20 chairs</li>
                         <li>All equipment must be returned in good condition</li>
                         <li>Cancellations should be made at least 24 hours before the reservation date</li>
                         <li>For special requests, please visit the barangay office</li>
+                        <li>Issues, Concern? You can leave a feedback or you may contact this number 09752210206</li>
                     </ul>
                 </div>
                 <h2 class="text-lg font-semibold text-blue-700 mb-4">Location Information</h2>
@@ -347,7 +361,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <label for="start_date" class="block text-gray-700 mb-1">Start Date <span class="text-red-500">*</span></label>
-                        <input type="date" id="start_date" name="start_date" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" min="<?php echo date('Y-m-d', strtotime('+3 days')); ?>" value="<?php echo isset($startDate) ? $startDate : ''; ?>" required>
+                        <input type="date" id="start_date" name="start_date" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" value="<?php echo isset($startDate) ? $startDate : ''; ?>" required>
                     </div>
                     
                     <div>
@@ -359,7 +373,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="end_date" class="block text-gray-700 mb-1">End Date <span class="text-red-500">*</span></label>
-                        <input type="date" id="end_date" name="end_date" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" min="<?php echo date('Y-m-d', strtotime('+3 days')); ?>" value="<?php echo isset($endDate) ? $endDate : ''; ?>" required>
+                        <input type="date" id="end_date" name="end_date" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>" value="<?php echo isset($endDate) ? $endDate : ''; ?>" required>
                     </div>
                     
                     <div>
@@ -518,15 +532,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 const prevInput = document.querySelector(`input[name="quantities[${id}]"]`);
                                 const prevValue = prevInput ? prevInput.value : 1;
                                 
+                                // Set maximum quantity based on resource name and available quantity
+                                let maxAllowed = maxQuantity;
+                                if (name === 'Tent' && maxAllowed > 1) {
+                                    maxAllowed = 1;
+                                } else if (name === 'Chairs' && maxAllowed > 20) {
+                                    maxAllowed = 20;
+                                }
+                                
                                 quantityDiv.innerHTML = `
                                     <label for="quantity_${id}" class="text-sm font-medium text-gray-700">${name} quantity:</label>
                                     <input type="number" id="quantity_${id}" 
                                            name="quantities[${id}]" 
                                            min="1" 
-                                           max="${maxQuantity}" 
-                                           value="${prevValue}" 
+                                           max="${maxAllowed}" 
+                                           value="${prevValue > maxAllowed ? maxAllowed : prevValue}" 
                                            class="w-20 px-2 py-1 border border-gray-300 rounded text-sm">
-                                    <span class="text-xs text-gray-500">(Max: ${maxQuantity})</span>
                                 `;
                                 equipmentQuantities.appendChild(quantityDiv);
                             });

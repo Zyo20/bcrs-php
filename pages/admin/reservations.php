@@ -463,8 +463,8 @@ if (isset($_SESSION['flash_message'])) {
                                                     case 'for_delivery':
                                                         $statusColor = 'bg-indigo-100 text-indigo-800';
                                                         break;
-                                                    case 'for_pickup':
-                                                        $statusColor = 'bg-purple-100 text-purple-800';
+                                                    case 'delivered':
+                                                        $statusColor = 'bg-indigo-100 text-indigo-800';
                                                         break;
                                                 }
                                                 ?>
@@ -486,16 +486,6 @@ if (isset($_SESSION['flash_message'])) {
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <a href="index.php?page=admin&section=view_reservation&id=<?php echo $reservation['id']; ?>" class="text-blue-600 hover:text-blue-900">View</a>
-                                                
-                                                <?php if ($reservation['status'] === 'pending'): ?>
-                                                    <a href="index.php?page=admin&section=approve_reservation&id=<?php echo $reservation['id']; ?>" class="text-green-600 hover:text-green-900 ml-2" onclick="return confirm('Are you sure you want to approve this reservation?')">Approve</a>
-                                                    <a href="index.php?page=admin&section=reject_reservation&id=<?php echo $reservation['id']; ?>" class="text-red-600 hover:text-red-900 ml-2" onclick="return confirm('Are you sure you want to reject this reservation?')">Reject</a>
-                                                <?php elseif ($reservation['status'] === 'approved'): ?>
-                                                    <a href="index.php?page=admin&section=mark_returned&id=<?php echo $reservation['id']; ?>" class="text-orange-600 hover:text-orange-700 ml-2" onclick="return confirm('Are you sure these items have been returned?')">Mark as Returned</a>
-                                                <?php elseif ($reservation['status'] === 'for_delivery' || $reservation['status'] === 'for_pickup'): ?>
-                                                    <a href="index.php?page=admin&section=update_status&id=<?php echo $reservation['id']; ?>&status=completed" class="text-green-600 hover:text-green-900 ml-2">Complete</a>
-                                                    <a href="index.php?page=admin&section=mark_returned&id=<?php echo $reservation['id']; ?>" class="text-orange-600 hover:text-orange-700 ml-2" onclick="return confirm('Are you sure these items have been returned?')">Mark as Returned</a>
-                                                <?php endif; ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>

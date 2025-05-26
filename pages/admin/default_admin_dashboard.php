@@ -475,10 +475,10 @@ try {
                                     <a href="index.php?page=admin&section=view_reservation&id=<?php echo $reservation['id']; ?>" class="text-blue-600 hover:underline">View</a>
                                     
                                     <?php if ($reservation['status'] === 'approved'): ?>
-                                        <a href="index.php?page=admin&section=update_status&id=<?php echo $reservation['id']; ?>&status=for_delivery" class="text-blue-600 hover:underline ml-2">Set for Delivery</a>
+                                        <a href="index.php?page=admin&section=update_status&id=<?php echo $reservation['id']; ?>&status=for_delivery" class="text-blue-600 hover:underline ml-2">Mark for Delivery</a>
                                     <?php elseif ($reservation['status'] === 'for_delivery' || $reservation['status'] === 'for_delivery'): ?>
-                                        <a href="index?page=admin&section=mark_completed&id=<?php echo $reservation['id']; ?>" class="text-green-600 hover:underline ml-2">For Pickup</a>
-                                    <?php elseif ($reservation['status'] === 'for_delivery' || $reservation['status'] === 'for_pickup'): ?>
+                                        <a href="index.php?page=admin&section=update_status&id=<?php echo $reservation['id']; ?>&status=delivered" class="text-green-600 hover:underline ml-2">Mark as Delivered</a>
+                                    <?php elseif ($reservation['status'] === 'for_delivery' || $reservation['status'] === 'delivered'): ?>
                                         <a href="index?page=admin&section=mark_completed&id=<?php echo $reservation['id']; ?>" class="text-green-600 hover:underline ml-2">Mark Complete</a>
                                     <?php endif; ?>
                                 </td>
